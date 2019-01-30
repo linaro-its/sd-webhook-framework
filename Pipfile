@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+mock = "*"
+pytest = "*"
+coverage = "*"
+pytest-cov = "*"
+responses = "*"
+
+[packages]
+requests = "*"
+flask = "*"
+json-minify = "*"
+vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
+
+[requires]
+python_version = "3.6"
