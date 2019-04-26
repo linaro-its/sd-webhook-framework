@@ -11,10 +11,9 @@ pytest-cov = "*"
 responses = "*"
 
 [packages]
+urllib3 = ">=1.24.2" # Fixes CVE-2019-11324
+Jinja2 = ">=2.10.1" # Fixes CVE-2019-10906
 requests = ">=2.20.0"
 flask = "*"
 json-minify = "*"
 vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
-
-[requires]
-python_version = "3.6"
