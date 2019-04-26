@@ -1,3 +1,5 @@
+.scannerwork
 .coverage
+.vscode
 .pytest_cache/
 configuration.jsonc

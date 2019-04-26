@@ -108,7 +108,7 @@ def test_initialise_missing_path(mock_rt, mock_init, mock_jloads):
 # Need to have some mock handlers for testing the rest of the app code.
 # For the purposes of mocking, ticket_data for create and comment will
 # be strings.
-class mock_handler_with_save_ticket_data:
+class MockHandlerWithSaveTicketData:
     save_ticket_data = True
 
     capabilities = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
@@ -126,7 +126,7 @@ class mock_handler_with_save_ticket_data:
         print("Assigned from %s to %s" % (assignee_from, assignee_to))
 
 
-class mock_handler_without_save_ticket_data:
+class MockHandlerWithoutSaveTicketData:
     save_ticket_data = False
 
     capabilities = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
@@ -150,7 +150,7 @@ def test_jira_hook_assignment(capsys):
     with patch.object(
             app,
             'initialise',
-            return_value=mock_handler_with_save_ticket_data()):
+            return_value=MockHandlerWithSaveTicketData()):
         with patch.object(
                 app.shared_sd,
                 'trigger_is_assignment',
@@ -176,7 +176,7 @@ def test_jira_hook_transition(capsys):
     with patch.object(
             app,
             'initialise',
-            return_value=mock_handler_without_save_ticket_data()):
+            return_value=MockHandlerWithoutSaveTicketData()):
         with patch.object(
                 app.shared_sd,
                 'trigger_is_assignment',
@@ -203,7 +203,7 @@ def test_comment(capsys):
     with patch.object(
             app,
             'initialise',
-            return_value=mock_handler_with_save_ticket_data()):
+            return_value=MockHandlerWithSaveTicketData()):
         with patch.object(
                 app.shared_sd,
                 'save_ticket_data_as_attachment',
@@ -219,7 +219,7 @@ def test_create(capsys):
     with patch.object(
             app,
             'initialise',
-            return_value=mock_handler_with_save_ticket_data()):
+            return_value=MockHandlerWithSaveTicketData()):
         with patch.object(
                 app.shared_sd,
                 'save_ticket_data_as_attachment',
