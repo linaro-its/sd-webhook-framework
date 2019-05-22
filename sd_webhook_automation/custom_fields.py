@@ -64,7 +64,9 @@ def get(name):
                 # And resave to file
                 with open(config.configuration["cf_cachefile"], "w") as f:
                     json.dump(cf_cache, f)
-        # TODO: extend for Cloud API
+        else:
+            # TODO: extend for Cloud API
+            raise NotImplementedError
 
     # Check again as we may have updated the cache
     if name in cf_cache:
