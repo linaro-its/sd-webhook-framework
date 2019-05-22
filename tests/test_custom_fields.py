@@ -48,9 +48,25 @@ def test_get_2():
     return_value=False,
     autospec=True
 )
+def test_get_cloud_exception(mock_os_path_isfile):
+    config.configuration = {
+        "cf_use_plugin_api": False,
+        "cf_use_cloud_api": True,
+        "cf_cachefile": "/tmp/cf_cachefile"
+    }
+    with pytest.raises(NotImplementedError):
+        custom_fields.get("foo")
+
+
+@mock.patch(
+    'custom_fields.os.path.isfile',
+    return_value=False,
+    autospec=True
+)
 def test_get_3(mock_os_path_isfile):
     config.configuration = {
         "cf_use_plugin_api": False,
+        "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
     }
     custom_fields.cf_cache = None

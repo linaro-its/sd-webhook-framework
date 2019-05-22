@@ -64,7 +64,7 @@ def get(name):
                 # And resave to file
                 with open(config.configuration["cf_cachefile"], "w") as f:
                     json.dump(cf_cache, f)
-        else:
+        elif config.configuration["cf_use_cloud_api"]:
             # TODO: extend for Cloud API
             raise NotImplementedError
 
