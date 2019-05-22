@@ -38,14 +38,19 @@ class MissingCFConfig(CustomFieldsError):
 cf_cache = None
 
 
-def get(name):
-    global cf_cache
+def validate_cf_config():
     if config.configuration is None:
         config.initialise()
     if "cf_use_plugin_api" not in config.configuration:
         raise MissingCFConfig("Can't find 'cf_use_plugin_api' in config")
+    if "cf_use_cloud_api" not in config.configuration:
+        raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
     if "cf_cachefile" not in config.configuration:
         raise MissingCFConfig("Can't find 'cf_cachefile' in config")
+
+
+def initialise_cf_cache():
+    global cf_cache
     if cf_cache is None:
         # Load the cache from the file
         if os.path.isfile(config.configuration["cf_cachefile"]):
@@ -53,6 +58,9 @@ def get(name):
                 cf_cache = json.load(f)
         else:
             cf_cache = {}
+
+
+def fetch_cf_value(name):
     if name not in cf_cache:
         # Are we using the REST API?
         if config.configuration["cf_use_plugin_api"]:
@@ -68,7 +76,12 @@ def get(name):
             # TODO: extend for Cloud API
             raise NotImplementedError
 
-    # Check again as we may have updated the cache
+
+def get(name):
+    global cf_cache
+    validate_cf_config()
+    initialise_cf_cache()
+    fetch_cf_value(name)
     if name in cf_cache:
         return cf_cache[name]
     else:

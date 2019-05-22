@@ -36,8 +36,17 @@ def test_get_1(mock_config_initialise):
 
 
 def test_get_2():
+    config.configuration = {}
+    with pytest.raises(custom_fields.MissingCFConfig):
+        custom_fields.get("foo")
     config.configuration = {
         "cf_use_plugin_api": False
+    }
+    with pytest.raises(custom_fields.MissingCFConfig):
+        custom_fields.get("foo")
+    config.configuration = {
+        "cf_use_plugin_api": False,
+        "cf_use_cloud_api": False
     }
     with pytest.raises(custom_fields.MissingCFConfig):
         custom_fields.get("foo")
@@ -88,6 +97,7 @@ mock_cf_cache = {
 def test_get_4(mock_os_path_isfile):
     config.configuration = {
         "cf_use_plugin_api": False,
+        "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
     }
     custom_fields.cf_cache = None
@@ -113,6 +123,7 @@ def test_get_4(mock_os_path_isfile):
 def test_get_5(mock_os_path_isfile):
     config.configuration = {
         "cf_use_plugin_api": True,
+        "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
     }
     custom_fields.cf_cache = None
