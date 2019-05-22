@@ -1,3 +1,5 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_sd-webhook-framework&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_sd-webhook-framework)
+
 # Introduction
 
 This repository provides the foundation for supporting webhook automation with Atlassian's Jira Service Desk.
