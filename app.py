@@ -14,13 +14,11 @@ import sys
 import importlib
 
 from flask import Flask, json, request
-# Tell Python where to find the webhook automation code.
-sys.path.insert(0, os.path.dirname(
-    os.path.abspath(__file__)) + "/sd_webhook_automation")
-import shared_sd  # noqa
+import sd_webhook_automation.shared_sd as shared_sd
 
 
 app = Flask(__name__)
+ticket_data = None
 
 
 @app.route('/', methods=['GET'])
