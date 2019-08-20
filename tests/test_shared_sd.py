@@ -1,7 +1,5 @@
 #!/usr/bin/python3
-
-import os
-import sys
+""" Test the shared Service Desk library. """
 
 import mock
 import pytest
@@ -9,19 +7,18 @@ import responses
 
 from requests.auth import HTTPBasicAuth
 
-# Tell Python where to find the webhook automation code.
-sys.path.insert(0, os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))) + "/sd_webhook_automation")
-import shared_sd  # noqa
-import config  # noqa
+import shared.shared_sd as shared_sd
+import shared.config as config
 
 
 def test_initialise_1():
+    """ Test the initialisation. """
     with pytest.raises(shared_sd.MalformedIssueError):
         shared_sd.initialise({})
 
 
 def test_initialise_2():
+    """ Test initialisation with a malformed issue. """
     data = {
         "issue": {}
     }
@@ -30,6 +27,7 @@ def test_initialise_2():
 
 
 def test_initialise_3():
+    """ Test initialisation with a different malformed issue. """
     data = {
         "issue": {
             "self": "self"
@@ -40,6 +38,7 @@ def test_initialise_3():
 
 
 def test_initialise_4():
+    """ Test initialisation with a different malformed issue. """
     data = {
         "issue": {
             "self": "self",
@@ -51,6 +50,7 @@ def test_initialise_4():
 
 
 def test_initialise_5():
+    """ Test initialisation with a different malformed issue. """
     data = {
         "issue": {
             "self": "self",
@@ -63,6 +63,7 @@ def test_initialise_5():
 
 
 def test_initialise_6():
+    """ Test initialisation with a different malformed issue. """
     data = {
         "issue": {
             "self": "self",
@@ -77,6 +78,7 @@ def test_initialise_6():
 
 
 def test_initialise_valid_data():
+    """ Test initialisation with valid issue data. """
     data = {
         "issue": {
             "self": "https://sd-server/rest/api/2/issue/21702",
@@ -89,13 +91,14 @@ def test_initialise_valid_data():
         }
     }
     shared_sd.initialise(data)
-    assert shared_sd.root_url == "https://sd-server"
-    assert shared_sd.ticket == "ITS-6895"
-    assert shared_sd.project == "ITS"
+    assert shared_sd.ROOT_URL == "https://sd-server"
+    assert shared_sd.TICKET == "ITS-6895"
+    assert shared_sd.PROJECT == "ITS"
 
 
 def test_simple_credentials():
-    config.configuration = {
+    """ Test that credential handling works. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "bot_password": "password"
     }
@@ -105,16 +108,17 @@ def test_simple_credentials():
 
 
 @mock.patch(
-    'shared_sd.vault_auth.get_secret',
+    'shared.shared_sd.vault_auth.get_secret',
     return_value={
-            "data": {
-                "pw": "vault_password"
-            }
-        },
+        "data": {
+            "pw": "vault_password"
+        }
+    },
     autospec=True
 )
 def test_vault_credentials(mock_get_secret):
-    config.configuration = {
+    """ Test credentials against the vault. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "vault_iam_role": "role",
         "vault_server_url": "url"
@@ -127,23 +131,26 @@ def test_vault_credentials(mock_get_secret):
 
 
 def dummy_config_initialise():
-    config.configuration = {}
+    """ Set up some dummy config. """
+    config.CONFIGURATION = {}
 
 
 @mock.patch(
-    'shared_sd.config.initialise',
+    'shared.shared_sd.config.initialise',
     side_effect=dummy_config_initialise,
     autospec=True
 )
 def test_missing_credentials_2(mock_config_initialise):
-    config.configuration = None
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = None
     with pytest.raises(shared_sd.MissingCredentials):
         shared_sd.sd_auth_credentials()
     assert mock_config_initialise.called is True
 
 
 def test_missing_credentials_3():
-    config.configuration = {
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = {
         "bot_name": "name"
     }
     with pytest.raises(shared_sd.MissingCredentials):
@@ -151,7 +158,8 @@ def test_missing_credentials_3():
 
 
 def test_missing_credentials_4():
-    config.configuration = {
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "vault_iam_role": "role"
     }
@@ -160,7 +168,8 @@ def test_missing_credentials_4():
 
 
 def test_missing_credentials_5():
-    config.configuration = {
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "vault_server_url": "url"
     }
@@ -169,7 +178,8 @@ def test_missing_credentials_5():
 
 
 def test_overlapping_credentials_1():
-    config.configuration = {
+    """ Test behaviour when multiple types of credentials are present. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "bot_password": "password",
         "vault_iam_role": "role"
@@ -179,7 +189,8 @@ def test_overlapping_credentials_1():
 
 
 def test_overlapping_credentials_2():
-    config.configuration = {
+    """ Test behaviour when multiple types of credentials are present. """
+    config.CONFIGURATION = {
         "bot_name": "name",
         "bot_password": "password",
         "vault_server_url": "url"
@@ -189,12 +200,13 @@ def test_overlapping_credentials_2():
 
 
 @mock.patch(
-    'shared_sd.sd_auth_credentials',
+    'shared.shared_sd.sd_auth_credentials',
     return_value=["name", "password"],
     autospec=True
 )
 def test_get_sd_auth(mock_sd_auth_credentials):
-    shared_sd.sd_auth = None
+    """ Check that get_sd_auth returns a valid HTTPBasicAuth. """
+    shared_sd.SD_AUTH = None
     result = shared_sd.get_sd_auth()
     compare = HTTPBasicAuth("name", "password")
     assert result == compare
@@ -203,7 +215,8 @@ def test_get_sd_auth(mock_sd_auth_credentials):
 
 @responses.activate
 def test_get_servicedesk_id_1():
-    shared_sd.root_url = "https://mock-server"
+    """ Check the code correctly determines a project's ID. """
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -223,7 +236,8 @@ def test_get_servicedesk_id_1():
 
 @responses.activate
 def test_get_servicedesk_id_2():
-    shared_sd.root_url = "https://mock-server"
+    """ Test behaviour when the project ID cannot be matched. """
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -243,7 +257,8 @@ def test_get_servicedesk_id_2():
 
 @responses.activate
 def test_get_servicedesk_id_3():
-    shared_sd.root_url = "https://mock-server"
+    """ Test behaviour when the credentials are invalid. """
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -256,7 +271,8 @@ def test_get_servicedesk_id_3():
 
 @responses.activate
 def test_sd_request_get():
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
+    """ Test calls to service_desk_request_get. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.GET,
         "https://mock-server/rest/api/foobar",
@@ -281,7 +297,8 @@ def test_sd_request_get():
 
 @responses.activate
 def test_sd_request_post():
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
+    """ Test calls to service_desk_request_post. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.POST,
         "https://mock-server/rest/api/foobar",
@@ -306,7 +323,8 @@ def test_sd_request_post():
 
 @responses.activate
 def test_sd_request_put():
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
+    """ Test calls to service_desk_request_put. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.PUT,
         "https://mock-server/rest/api/foobar",
@@ -330,11 +348,12 @@ def test_sd_request_put():
 
 
 @mock.patch(
-    'shared_sd.get_servicedesk_id',
+    'shared.shared_sd.get_servicedesk_id',
     return_value=-1,
     autospec=True
 )
 def test_save_as_attachment_bad_project(mock_get_servicedesk_id):
+    """ Test handling of a bad project when saving attachment. """
     result = shared_sd.save_text_as_attachment(
         "filename",
         "content",
@@ -346,14 +365,15 @@ def test_save_as_attachment_bad_project(mock_get_servicedesk_id):
 
 
 @mock.patch(
-    'shared_sd.get_servicedesk_id',
+    'shared.shared_sd.get_servicedesk_id',
     return_value=3,
     autospec=True
 )
 @responses.activate
 def test_save_as_attachment_bad_status(mock_get_servicedesk_id):
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
-    shared_sd.root_url = "https://mock-server"
+    """ Test handling of a bad status when saving attachment. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/servicedesk/3"
@@ -375,15 +395,16 @@ def test_save_as_attachment_bad_status(mock_get_servicedesk_id):
 
 
 @mock.patch(
-    'shared_sd.get_servicedesk_id',
+    'shared.shared_sd.get_servicedesk_id',
     return_value=3,
     autospec=True
 )
 @responses.activate
 def test_save_as_attachment_good_status(mock_get_servicedesk_id):
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
-    shared_sd.root_url = "https://mock-server"
-    shared_sd.ticket = "ITS-1"
+    """ Test handling of saving attachment. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared_sd.ROOT_URL = "https://mock-server"
+    shared_sd.TICKET = "ITS-1"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/servicedesk/3"
@@ -420,23 +441,24 @@ def test_save_as_attachment_good_status(mock_get_servicedesk_id):
 
 @responses.activate
 def test_get_cf_id_from_plugin():
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
-    shared_sd.root_url = "https://mock-server"
+    """ Test using the plugin to get a custom field ID. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
         "customfields",
         json=[
-                {
-                    "fieldId": 10100,
-                    "fieldName": "Customer Request Type",
-                    "fieldType": "com.atlassian.servicedesk:vp-origin",
-                    "fieldDescription": (
-                        "Holds information about which Service Desk was used "
-                        "to create a ticket. This custom field is created "
-                        "programmatically and must not be modified.")
-                }
-            ],
+            {
+                "fieldId": 10100,
+                "fieldName": "Customer Request Type",
+                "fieldType": "com.atlassian.servicedesk:vp-origin",
+                "fieldDescription": (
+                    "Holds information about which Service Desk was used "
+                    "to create a ticket. This custom field is created "
+                    "programmatically and must not be modified.")
+            }
+        ],
         status=200
     )
     result = shared_sd.get_customfield_id_from_plugin("foo")
@@ -447,8 +469,9 @@ def test_get_cf_id_from_plugin():
 
 @responses.activate
 def test_denied_cf_id_from_plugin():
-    shared_sd.sd_auth = HTTPBasicAuth("name", "password")
-    shared_sd.root_url = "https://mock-server"
+    """ Test handling of access denied from the plugin. """
+    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared_sd.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
@@ -463,20 +486,22 @@ def test_denied_cf_id_from_plugin():
 
 
 @mock.patch(
-    'shared_sd.get_customfield_id_from_plugin',
+    'shared.shared_sd.get_customfield_id_from_plugin',
     return_value=None
 )
 def test_ticket_request_type_1(mock_get_cf_id):
+    """ Test handling of failure to determine custom field. """
     with pytest.raises(shared_sd.CustomFieldLookupFailure):
         shared_sd.ticket_request_type(None)
     assert mock_get_cf_id.called is True
 
 
 @mock.patch(
-    'shared_sd.get_customfield_id_from_plugin',
+    'shared.shared_sd.get_customfield_id_from_plugin',
     return_value=10100
 )
 def test_ticket_request_type_2(mock_get_cf_id):
+    """ Test handling of malformed issue. """
     data = {
         "issue": {
             "fields": {}
@@ -488,10 +513,11 @@ def test_ticket_request_type_2(mock_get_cf_id):
 
 
 @mock.patch(
-    'shared_sd.get_customfield_id_from_plugin',
+    'shared.shared_sd.get_customfield_id_from_plugin',
     return_value=10100
 )
 def test_ticket_request_type_3(mock_get_cf_id):
+    """ Test handling of custom fields in request type. """
     data = {
         "issue": {
             "fields": {
@@ -503,11 +529,14 @@ def test_ticket_request_type_3(mock_get_cf_id):
             }
         }
     }
+    # Stop pylint complaining we don't use the argument.
+    _ = mock_get_cf_id
     result = shared_sd.ticket_request_type(data)
     assert result == "206"
 
 
 def test_usable_ticket_data():
+    """ Test various scenarios to see if the ticket data is usable. """
     result = shared_sd.usable_ticket_data({})
     assert result is False
 
@@ -547,6 +576,7 @@ def test_usable_ticket_data():
 
 
 def test_trigger_is_assignment():
+    """ Test the code that determines if trigger is ticket assignment. """
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_assigned",
@@ -568,6 +598,7 @@ def test_trigger_is_assignment():
 
 
 def test_trigger_is_transition():
+    """ Test the code that determines if trigger is transition. """
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
@@ -589,18 +620,19 @@ def test_trigger_is_transition():
 
 
 def test_look_for_trigger():
+    """ Test the code that determines the cause of the trigger. """
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic"
     }
-    with (pytest.raises(shared_sd.MalformedIssueError)):
+    with pytest.raises(shared_sd.MalformedIssueError):
         shared_sd.look_for_trigger(None, data)
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
         "changelog": {}
     }
-    with (pytest.raises(shared_sd.MalformedIssueError)):
+    with pytest.raises(shared_sd.MalformedIssueError):
         shared_sd.look_for_trigger(None, data)
     data = {
         "webhookEvent": "jira:issue_updated",
@@ -627,13 +659,14 @@ def test_look_for_trigger():
 
 
 def test_automation_triggered_comment():
+    """ Test the code that determines if the automation wrote the last comment. """
     result = shared_sd.automation_triggered_comment({})
     assert result is False
 
     data = {
         "comment": {
             "author": {
-                "name": config.configuration["bot_name"]
+                "name": config.CONFIGURATION["bot_name"]
             }
         }
     }
@@ -642,32 +675,34 @@ def test_automation_triggered_comment():
 
 
 @mock.patch(
-    'shared_sd.print'
+    'shared.shared_sd.print'
 )
 @mock.patch(
-    'shared_sd.save_text_as_attachment',
+    'shared.shared_sd.save_text_as_attachment',
     autospec=True
 )
 def test_save_ticket_data_as_attachment_1(
         mock_save_text_as_attachment, mock_print):
+    """ Test the debug code that saves the ticket data as an attachment. """
     shared_sd.save_ticket_data_as_attachment({})
     assert mock_print.called is False
     assert mock_save_text_as_attachment.called is True
 
 
 @mock.patch(
-    'shared_sd.print'
+    'shared.shared_sd.print'
 )
 @mock.patch(
-    'shared_sd.save_text_as_attachment',
+    'shared.shared_sd.save_text_as_attachment',
     autospec=True
 )
 def test_save_ticket_data_as_attachment_2(
         mock_save_text_as_attachment, mock_print):
+    """ Test the debug code that saves the ticket data as an attachment. """
     data = {
         "comment": {
             "author": {
-                "name": config.configuration["bot_name"]
+                "name": config.CONFIGURATION["bot_name"]
             }
         }
     }
