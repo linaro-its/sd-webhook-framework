@@ -10,6 +10,7 @@ coverage = "*"
 pytest-cov = "*"
 responses = "*"
 safety = "*"
+pylint = "*"
 
 [packages]
 urllib3 = ">=1.24.2" # Fixes CVE-2019-11324

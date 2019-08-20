@@ -22,10 +22,10 @@ Each *request type* has its own code file. The main code loads the code file app
 ticket being handled.
 
 Since the webhooks can be generic across all of the issue/request types, each code file has a
-capabilities section that the main code queries in order to determine whether or not the
+CAPABILITIES section that the main code queries in order to determine whether or not the
 code can support the desired action, e.g.:
 
-    capabilities = [ "CREATE", "ASSIGNMENT" ]
+    CAPABILITIES = [ "CREATE", "ASSIGNMENT" ]
 
 The sample test handler `rt206.py` lists all of the supported transition names.
 
