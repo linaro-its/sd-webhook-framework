@@ -6,15 +6,11 @@ from requests.auth import HTTPBasicAuth
 
 import mock
 from mock import mock_open, patch
+import pytest
 import responses
 
 import shared.globals
 import shared.custom_fields as custom_fields
-
-
-def dummy_config_initialise():
-    """ Provide some dummy config. """
-    shared.globals.CONFIGURATION = {}
 
 
 @responses.activate
@@ -165,3 +161,12 @@ def test_get_5(mock_os_path_isfile):
                 mock_patch.return_value.__enter__.return_value
             )
             assert result == 10100
+
+def test_cloud_exception():
+    shared.globals.CONFIGURATION = {
+        "cf_use_plugin_api": False,
+        "cf_use_cloud_api": True,
+        "cf_cachefile": "nothing"
+    }
+    with pytest.raises(NotImplementedError):
+        custom_fields.fetch_cf_value("blah")

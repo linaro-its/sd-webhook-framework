@@ -84,10 +84,10 @@ def fetch_cf_value(name):
                 # And resave to file
                 with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
                     json.dump(CF_CACHE, handle)
-        # elif shared.globals.CONFIGURATION["cf_use_cloud_api"]:
-        #     # pylint: disable=fixme
-        #     # TODO: extend for Cloud API
-        #     raise NotImplementedError
+        elif shared.globals.CONFIGURATION["cf_use_cloud_api"]:
+            # pylint: disable=fixme
+            # TODO: extend for Cloud API
+            raise NotImplementedError
 
 
 def get(name):
