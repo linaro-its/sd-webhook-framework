@@ -70,32 +70,23 @@ def validate_cf_config():
         raise MissingCFConfig("Can't find 'cf_cachefile' in config")
 
 
+def validate_vault_tag(tag, required):
+    """ Check if the tag is present when it needs to be. """
+    if tag in CONFIGURATION:
+        if not required:
+            raise OverlappingCredentials(
+                "Can't have 'bot_password' and '%s'" % tag)
+    else:
+        if required:
+            raise MissingCredentials(
+                "Missing '%s' in configuration file" % tag)
+
+
 def validate_vault_config(required):
     """ Check the various vault config combinations. """
-    if "vault_bot_name" in CONFIGURATION:
-        if not required:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_bot_name'")
-    else:
-        if required:
-            raise MissingCredentials(
-                "Missing 'vault_bot_name' in configuration file")
-    if "vault_iam_role" in CONFIGURATION:
-        if not required:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_iam_role'")
-    else:
-        if required:
-            raise MissingCredentials(
-                "Missing 'vault_iam_role' in configuration file")
-    if "vault_server_url" in CONFIGURATION:
-        if not required:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_server_url'")
-    else:
-        if required:
-            raise MissingCredentials(
-                "Missing 'vault_server_url' in configuration file")
+    validate_vault_tag("vault_bot_name", required)
+    validate_vault_tag("vault_iam_role", required)
+    validate_vault_tag("vault_server_url", required)
 
 
 def validate_auth_config():
