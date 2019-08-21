@@ -1,20 +1,22 @@
 #!/usr/bin/python3
+""" Test the app code. """
 
 import os
 import sys
-
-import mock
 from unittest.mock import patch
+import mock
 
-# Tell Python where to find the webhook automation code.
+# Tell Python where to find the webhook automation code otherwise
+# the test code isn't able to import it.
 sys.path.insert(0, os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
-import app  # noqa
+import app  # pylint: disable=wrong-import-position
 
 
 def test_hello_world():
-    foo = app.hello_world()
-    assert foo == "Hello, world!"
+    """ Test the hello_world route. """
+    test_result = app.hello_world()
+    assert test_result == "Hello, world!"
 
 
 @mock.patch(
@@ -32,9 +34,10 @@ def test_hello_world():
     autospec=True
 )
 def test_initialise(mock_rt, mock_init, mock_jloads):
+    """ Test the app initialisation. """
     # The app code includes a variable called app, so reference that
     # as flask_app to make the code clearer.
-    flask_app = app.app
+    flask_app = app.APP
     with flask_app.test_request_context('/'):
         test_result = app.initialise()
         assert mock_rt.called is True
@@ -58,9 +61,10 @@ def test_initialise(mock_rt, mock_init, mock_jloads):
     autospec=True
 )
 def test_initialise_missing_handler(mock_rt, mock_init, mock_jloads):
+    """ Test handling of a handler that needs to be loaded. """
     # The app code includes a variable called app, so reference that
     # as flask_app to make the code clearer.
-    flask_app = app.app
+    flask_app = app.APP
     with flask_app.test_request_context('/'):
         test_result = app.initialise()
         assert mock_rt.called is True
@@ -84,9 +88,10 @@ def test_initialise_missing_handler(mock_rt, mock_init, mock_jloads):
     autospec=True
 )
 def test_initialise_missing_path(mock_rt, mock_init, mock_jloads):
+    """ Test the code that adds the path to the handlers. """
     # The app code includes a variable called app, so reference that
     # as flask_app to make the code clearer.
-    flask_app = app.app
+    flask_app = app.APP
     with flask_app.test_request_context('/'):
         # Build the path to rt_handlers. Note that we need to go two levels
         # up ...
@@ -108,43 +113,70 @@ def test_initialise_missing_path(mock_rt, mock_init, mock_jloads):
 # Need to have some mock handlers for testing the rest of the app code.
 # For the purposes of mocking, ticket_data for create and comment will
 # be strings.
+#
+# The functions use @staticmethod in order to avoid Python complaining
+# that the methods could be functions (since they don't refer to the
+# class, and the normal handlers aren't classes.)
 class MockHandlerWithSaveTicketData:
-    save_ticket_data = True
+    """ A mock handler class. """
+    SAVE_TICKET_DATA = True
 
-    capabilities = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
+    CAPABILITIES = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
 
-    def create(self, ticket_data):
+    @staticmethod
+    def create(ticket_data):
+        """ Create handler. """
         print("Create function called with %s" % ticket_data)
 
-    def comment(self, ticket_data):
+    @staticmethod
+    def comment(ticket_data):
+        """ Comment handler. """
         print("Comment function called with %s" % ticket_data)
 
-    def transition(self, status_from, status_to, ticket_data):
+    @staticmethod
+    def transition(status_from, status_to, ticket_data):
+        """ Transition handler. """
+        _ = ticket_data
         print("Transition from %s to %s" % (status_from, status_to))
 
-    def assignment(self, assignee_from, assignee_to, ticket_data):
+    @staticmethod
+    def assignment(assignee_from, assignee_to, ticket_data):
+        """ Assignment handler. """
+        _ = ticket_data
         print("Assigned from %s to %s" % (assignee_from, assignee_to))
 
 
 class MockHandlerWithoutSaveTicketData:
-    save_ticket_data = False
+    """ A mock handler class. """
+    SAVE_TICKET_DATA = False
 
-    capabilities = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
+    CAPABILITIES = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
 
-    def create(self, ticket_data):
+    @staticmethod
+    def create(ticket_data):
+        """ Create handler. """
         print("Create function called with %s" % ticket_data)
 
-    def comment(self, ticket_data):
+    @staticmethod
+    def comment(ticket_data):
+        """ Comment handler. """
         print("Comment function called with %s" % ticket_data)
 
-    def transition(self, status_from, status_to, ticket_data):
+    @staticmethod
+    def transition(status_from, status_to, ticket_data):
+        """ Transition handler. """
+        _ = ticket_data
         print("Transition from %s to %s" % (status_from, status_to))
 
-    def assignment(self, assignee_from, assignee_to, ticket_data):
+    @staticmethod
+    def assignment(assignee_from, assignee_to, ticket_data):
+        """ Assignment handler. """
+        _ = ticket_data
         print("Assigned from %s to %s" % (assignee_from, assignee_to))
 
 
 def test_jira_hook_assignment(capsys):
+    """ Test jira_hook assignment handling. """
     # We use patch.object here instead of @mock.patch because it is very
     # tricky to use features (capsys) in conjunction with mock params.
     with patch.object(
@@ -160,7 +192,7 @@ def test_jira_hook_assignment(capsys):
                     app.shared_sd,
                     'trigger_is_transition',
                     return_value=(False, None, None)
-                    ):
+                ):
                 with patch.object(
                         app.shared_sd,
                         'save_ticket_data_as_attachment',
@@ -173,6 +205,7 @@ def test_jira_hook_assignment(capsys):
 
 
 def test_jira_hook_transition(capsys):
+    """ Test jira_hook transition handling. """
     with patch.object(
             app,
             'initialise',
@@ -186,7 +219,7 @@ def test_jira_hook_transition(capsys):
                     app.shared_sd,
                     'trigger_is_transition',
                     return_value=(True, "status_from", "status_to")
-                    ):
+                ):
                 with patch.object(
                         app.shared_sd,
                         'save_ticket_data_as_attachment',
@@ -199,7 +232,8 @@ def test_jira_hook_transition(capsys):
 
 
 def test_comment(capsys):
-    app.ticket_data = "ticket data"
+    """ Test comment handling. """
+    app.TICKET_DATA = "ticket data"
     with patch.object(
             app,
             'initialise',
@@ -215,7 +249,8 @@ def test_comment(capsys):
 
 
 def test_create(capsys):
-    app.ticket_data = "ticket data"
+    """ Test create handling. """
+    app.TICKET_DATA = "ticket data"
     with patch.object(
             app,
             'initialise',
