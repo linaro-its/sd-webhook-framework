@@ -13,7 +13,7 @@ import os
 import sys
 import importlib
 
-from flask import Flask, json, request
+from flask import Flask, request
 import shared.globals
 import shared.shared_sd as shared_sd
 
@@ -75,7 +75,7 @@ def jira_hook():
 
 def initialise():
     """ Initialise code and variables for this event. """
-    shared.globals.intialise_config()
+    shared.globals.initialise_config()
     shared.globals.initialise_ticket_data(request.data)
     shared.globals.initialise_shared_sd()
     shared.globals.initialise_sd_auth()
