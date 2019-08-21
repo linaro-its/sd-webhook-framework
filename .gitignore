@@ -4,3 +4,4 @@
 .pytest_cache/
 configuration.jsonc
 __pycache__
+*.pyc
