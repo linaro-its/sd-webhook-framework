@@ -15,6 +15,7 @@
     // "bot_password": "valid-account-password",
     // or specify the following Vault parameters if using
     // Hashicorp Vault to store secrets.
+    // "vault_bot_name": "secret/blob/bot_name",
     // "vault_iam_role": "aws-iam-role",
     // "vault_server_url": "https://vault.example.com"
 }

@@ -77,6 +77,9 @@ def sd_auth_credentials():
             "Missing 'bot_name' in configuration file")
     if "bot_password" not in config.CONFIGURATION:
         # Make sure that the Vault values are there
+        if "vault_bot_name" not in config.CONFIGURATION:
+            raise MissingCredentials(
+                "Missing 'vault_bot_name' in configuration file")
         if "vault_iam_role" not in config.CONFIGURATION:
             raise MissingCredentials(
                 "Missing 'vault_iam_role' in configuration file")
@@ -84,22 +87,22 @@ def sd_auth_credentials():
             raise MissingCredentials(
                 "Missing 'vault_server_url' in configuration file")
         secret = vault_auth.get_secret(
-            config.CONFIGURATION["bot_name"],
+            config.CONFIGURATION["vault_bot_name"],
             iam_role=config.CONFIGURATION["vault_iam_role"],
             url=config.CONFIGURATION["vault_server_url"]
         )
         # This assumes that the password will be stored in the "pw" key.
         return config.CONFIGURATION["bot_name"], secret["data"]["pw"]
-    else:
-        # Make sure that the Vault values are NOT there
-        if "vault_iam_role" in config.CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_iam_role'")
-        if "vault_server_url" in config.CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_server_url'")
-        return config.CONFIGURATION["bot_name"],\
-            config.CONFIGURATION["bot_password"]
+    # We're using a password to authenticate with. Just as a sanity check,
+    # make sure that the Vault values are NOT there
+    if "vault_iam_role" in config.CONFIGURATION:
+        raise OverlappingCredentials(
+            "Can't have 'bot_password' and 'vault_iam_role'")
+    if "vault_server_url" in config.CONFIGURATION:
+        raise OverlappingCredentials(
+            "Can't have 'bot_password' and 'vault_server_url'")
+    return config.CONFIGURATION["bot_name"],\
+        config.CONFIGURATION["bot_password"]
 
 
 def get_sd_auth():
