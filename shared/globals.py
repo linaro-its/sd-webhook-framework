@@ -59,6 +59,59 @@ def initialise_shared_sd():
     TICKET = TICKET_DATA["issue"]["key"]
     PROJECT = TICKET_DATA["issue"]["fields"]["project"]["key"]
 
+
+def validate_cf_config():
+    """ Raise exceptions if the configuration has problems. """
+    if "cf_use_plugin_api" not in CONFIGURATION:
+        raise MissingCFConfig("Can't find 'cf_use_plugin_api' in config")
+    if "cf_use_cloud_api" not in CONFIGURATION:
+        raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
+    if "cf_cachefile" not in CONFIGURATION:
+        raise MissingCFConfig("Can't find 'cf_cachefile' in config")
+
+
+def validate_vault_config(required):
+    """ Check the various vault config combinations. """
+    if "vault_bot_name" in CONFIGURATION:
+        if not required:
+            raise OverlappingCredentials(
+                "Can't have 'bot_password' and 'vault_bot_name'")
+    else:
+        if required:
+            raise MissingCredentials(
+                "Missing 'vault_bot_name' in configuration file")
+    if "vault_iam_role" in CONFIGURATION:
+        if not required:
+            raise OverlappingCredentials(
+                "Can't have 'bot_password' and 'vault_iam_role'")
+    else:
+        if required:
+            raise MissingCredentials(
+                "Missing 'vault_iam_role' in configuration file")
+    if "vault_server_url" in CONFIGURATION:
+        if not required:
+            raise OverlappingCredentials(
+                "Can't have 'bot_password' and 'vault_server_url'")
+    else:
+        if required:
+            raise MissingCredentials(
+                "Missing 'vault_server_url' in configuration file")
+
+
+def validate_auth_config():
+    """ Raise exceptions if the configuration has problems. """
+    if "bot_name" not in CONFIGURATION:
+        raise MissingCredentials(
+            "Missing 'bot_name' in configuration file")
+    if "bot_password" not in CONFIGURATION:
+        # Make sure that the Vault values are there
+        validate_vault_config(True)
+    else:
+        # We're using a password to authenticate with. Just as a sanity check,
+        # make sure that the Vault values are NOT there.
+        validate_vault_config(False)
+
+
 def initialise_config():
     """ Read the JSON configuration file into a global JSON blob. """
     global CONFIGURATION
@@ -67,36 +120,8 @@ def initialise_config():
     basedir = os.path.dirname(os.path.dirname(__file__))
     with open(os.path.join(basedir, "configuration.jsonc")) as handle:
         CONFIGURATION = json.loads(json_minify(handle.read()))
-    # Raise exceptions if the configuration has problems. """
-    if "cf_use_plugin_api" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_use_plugin_api' in config")
-    if "cf_use_cloud_api" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
-    if "cf_cachefile" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_cachefile' in config")
-    if "bot_name" not in CONFIGURATION:
-        raise MissingCredentials(
-            "Missing 'bot_name' in configuration file")
-    if "bot_password" not in CONFIGURATION:
-        # Make sure that the Vault values are there
-        if "vault_bot_name" not in CONFIGURATION:
-            raise MissingCredentials(
-                "Missing 'vault_bot_name' in configuration file")
-        if "vault_iam_role" not in CONFIGURATION:
-            raise MissingCredentials(
-                "Missing 'vault_iam_role' in configuration file")
-        if "vault_server_url" not in CONFIGURATION:
-            raise MissingCredentials(
-                "Missing 'vault_server_url' in configuration file")
-    else:
-        # We're using a password to authenticate with. Just as a sanity check,
-        # make sure that the Vault values are NOT there
-        if "vault_iam_role" in CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_iam_role'")
-        if "vault_server_url" in CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_server_url'")
+    validate_cf_config()
+    validate_auth_config()
 
 
 def get_sd_credentials():
