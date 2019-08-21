@@ -164,6 +164,19 @@ def test_initialise_config():
         "cf_cachefile": "/tmp/cachefile",
         "bot_name": "Fred",
         "bot_password": "password",
+        "vault_bot_name": "bot"
+    }
+    with patch("builtins.open", mock_open(
+            read_data=json.dumps(data)
+    )):
+        with pytest.raises(shared.globals.OverlappingCredentials):
+            shared.globals.initialise_config()
+    data = {
+        "cf_use_plugin_api": True,
+        "cf_use_cloud_api": False,
+        "cf_cachefile": "/tmp/cachefile",
+        "bot_name": "Fred",
+        "bot_password": "password",
         "vault_iam_role": "iam"
     }
     with patch("builtins.open", mock_open(
