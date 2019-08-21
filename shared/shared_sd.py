@@ -15,106 +15,24 @@ vault_auth can be found at https://github.com/linaro-its/vault_auth
 import json
 from datetime import datetime
 import requests
-from requests.auth import HTTPBasicAuth
-import vault_auth
-import shared.config as config
-
-
-SD_AUTH = None
-ROOT_URL = None
-TICKET = None
-PROJECT = None
+import shared.globals
+import shared.custom_fields as custom_fields
 
 
 class SharedSDError(Exception):
     """ Base exception class for the library. """
 
-
 class MalformedIssueError(SharedSDError):
     """ Malformed issue exception. """
-
-
-class MissingCredentials(SharedSDError):
-    """ Missing credentials exception. """
-
-
-class OverlappingCredentials(SharedSDError):
-    """ Overlapping credentials exception. """
-
 
 class CustomFieldLookupFailure(SharedSDError):
     """ Custom field lookup failure exception. """
 
 
-def initialise(ticket_data):
-    """ Initialise the code. """
-    global ROOT_URL, TICKET, PROJECT  # pylint: disable=global-statement
-    # Get the ticket details from the data and save it
-    if "issue" not in ticket_data:
-        raise MalformedIssueError("Missing 'issue' in data")
-    if "self" not in ticket_data["issue"]:
-        raise MalformedIssueError("Missing 'self' in issue")
-    if "key" not in ticket_data["issue"]:
-        raise MalformedIssueError("Missing 'key' in issue")
-    if "fields" not in ticket_data["issue"]:
-        raise MalformedIssueError("Missing 'fields' in issue")
-    if "project" not in ticket_data["issue"]["fields"]:
-        raise MalformedIssueError("Missing 'project' in fields")
-    if "key" not in ticket_data["issue"]["fields"]["project"]:
-        raise MalformedIssueError("Missing 'key' in project")
-    issue_url = ticket_data["issue"]["self"].split("/", 3)
-    ROOT_URL = "%s//%s" % (issue_url[0], issue_url[2])
-    TICKET = ticket_data["issue"]["key"]
-    PROJECT = ticket_data["issue"]["fields"]["project"]["key"]
-
-
-def sd_auth_credentials():
-    """ Return the username and password for the automation. """
-    if config.CONFIGURATION is None:
-        config.initialise()
-    if "bot_name" not in config.CONFIGURATION:
-        raise MissingCredentials(
-            "Missing 'bot_name' in configuration file")
-    if "bot_password" not in config.CONFIGURATION:
-        # Make sure that the Vault values are there
-        if "vault_iam_role" not in config.CONFIGURATION:
-            raise MissingCredentials(
-                "Missing 'vault_iam_role' in configuration file")
-        if "vault_server_url" not in config.CONFIGURATION:
-            raise MissingCredentials(
-                "Missing 'vault_server_url' in configuration file")
-        secret = vault_auth.get_secret(
-            config.CONFIGURATION["bot_name"],
-            iam_role=config.CONFIGURATION["vault_iam_role"],
-            url=config.CONFIGURATION["vault_server_url"]
-        )
-        # This assumes that the password will be stored in the "pw" key.
-        return config.CONFIGURATION["bot_name"], secret["data"]["pw"]
-    else:
-        # Make sure that the Vault values are NOT there
-        if "vault_iam_role" in config.CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_iam_role'")
-        if "vault_server_url" in config.CONFIGURATION:
-            raise OverlappingCredentials(
-                "Can't have 'bot_password' and 'vault_server_url'")
-        return config.CONFIGURATION["bot_name"],\
-            config.CONFIGURATION["bot_password"]
-
-
-def get_sd_auth():
-    """ Return a built HTTPBasicAuth object for the automation. """
-    global SD_AUTH  # pylint: disable=global-statement
-    if SD_AUTH is None:
-        name, password = sd_auth_credentials()
-        SD_AUTH = HTTPBasicAuth(name, password)
-    return SD_AUTH
-
-
 def get_servicedesk_id(sd_project_key):
     """ Return the Service Desk ID for a given project key. """
     result = service_desk_request_get(
-        "%s/rest/servicedeskapi/servicedesk" % ROOT_URL)
+        "%s/rest/servicedeskapi/servicedesk" % shared.globals.ROOT_URL)
     if result.status_code == 200:
         unpack = result.json()
         values = unpack["values"]
@@ -128,12 +46,12 @@ def save_text_as_attachment(filename, content, comment, public):
     """Save the specified text as a file on the current ticket."""
     headers = {'X-Atlassian-Token': 'no-check', 'X-ExperimentalApi': 'true'}
     files = {'file': (filename, content, 'text/plain')}
-    sd_id = get_servicedesk_id(PROJECT)
+    sd_id = get_servicedesk_id(shared.globals.PROJECT)
     if sd_id != -1:
         result = requests.post(
             "%s/rest/servicedeskapi/servicedesk/%s/attachTemporaryFile" % (
-                ROOT_URL, sd_id),
-            headers=headers, files=files, auth=get_sd_auth())
+                shared.globals.ROOT_URL, sd_id),
+            headers=headers, files=files, auth=shared.globals.SD_AUTH)
         if result.status_code == 201:
             json_result = result.json()
             create = {
@@ -148,7 +66,7 @@ def save_text_as_attachment(filename, content, comment, public):
             }
             result = service_desk_request_post(
                 "%s/rest/servicedeskapi/request/%s/attachment" % (
-                    ROOT_URL, TICKET),
+                    shared.globals.ROOT_URL, shared.globals.TICKET),
                 json.dumps(create))
         # Return the status code either from creating the attachment or
         # attaching the temporary file.
@@ -157,30 +75,10 @@ def save_text_as_attachment(filename, content, comment, public):
     return -1
 
 
-def get_customfield_id_from_plugin(field_name):
-    """ Using the CF Editor plugin, return the ID for a given CF name. """
-    result = service_desk_request_get(
-        "%s/rest/jiracustomfieldeditorplugin/1/admin/customfields" % ROOT_URL
-    )
-    if result.status_code == 200:
-        fields = result.json()
-        for field in fields:
-            if field["fieldName"] == field_name:
-                return field["fieldId"]
-    else:
-        print("Got status %s when requesting custom field %s" % (
-            result.status_code, field_name))
-        # Try to get the human readable error message
-        fields = result.json()
-        if "message" in fields:
-            print(fields["message"])
-    return None
-
-
 def ticket_request_type(ticket_data):
     """ Return the request type for the provided ticket data. """
     # The request type is stored in the Customer Request Type CF.
-    crt_cf = get_customfield_id_from_plugin("Customer Request Type")
+    crt_cf = custom_fields.get("Customer Request Type")
     if crt_cf is None:
         raise CustomFieldLookupFailure(
             "Failed to find 'Customer Request Type'")
@@ -214,7 +112,7 @@ def automation_triggered_comment(ticket_data):
             "author" in ticket_data["comment"] and
             "name" in ticket_data["comment"]["author"] and
             ticket_data["comment"]["author"][
-                "name"] == config.CONFIGURATION["bot_name"]):
+                "name"] == shared.globals.CONFIGURATION["bot_name"]):
         return True
     return False
 
@@ -268,16 +166,16 @@ def usable_ticket_data(ticket_data):
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.get(url, headers=headers, auth=get_sd_auth())
+    return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
 
 
 def service_desk_request_post(url, data):
     """Centralised routine to POST to Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.post(url, headers=headers, auth=get_sd_auth(), data=data)
+    return requests.post(url, headers=headers, auth=shared.globals.SD_AUTH, data=data)
 
 
 def service_desk_request_put(url, data):
     """Centralised routine to PUT to Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.put(url, headers=headers, auth=get_sd_auth(), data=data)
+    return requests.put(url, headers=headers, auth=shared.globals.SD_AUTH, data=data)
