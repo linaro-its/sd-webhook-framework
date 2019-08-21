@@ -120,6 +120,7 @@ def test_vault_credentials(mock_get_secret):
     """ Test credentials against the vault. """
     config.CONFIGURATION = {
         "bot_name": "name",
+        "vault_bot_name": "bot_name",
         "vault_iam_role": "role",
         "vault_server_url": "url"
     }
@@ -171,6 +172,29 @@ def test_missing_credentials_5():
     """ Test behaviour when credentials are missing. """
     config.CONFIGURATION = {
         "bot_name": "name",
+        "vault_iam_role": "role",
+        "vault_server_url": "url"
+    }
+    with pytest.raises(shared_sd.MissingCredentials):
+        shared_sd.sd_auth_credentials()
+
+
+def test_missing_credentials_6():
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = {
+        "bot_name": "name",
+        "vault_iam_role": "role",
+        "vault_bot_name": "bot"
+    }
+    with pytest.raises(shared_sd.MissingCredentials):
+        shared_sd.sd_auth_credentials()
+
+
+def test_missing_credentials_7():
+    """ Test behaviour when credentials are missing. """
+    config.CONFIGURATION = {
+        "bot_name": "name",
+        "vault_bot_name": "bot",
         "vault_server_url": "url"
     }
     with pytest.raises(shared_sd.MissingCredentials):
