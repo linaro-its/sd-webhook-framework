@@ -14,11 +14,11 @@ import sys
 import importlib
 
 from flask import Flask, json, request
+import shared.globals
 import shared.shared_sd as shared_sd
 
 
 APP = Flask(__name__)
-TICKET_DATA = None
 
 
 @APP.route('/', methods=['GET'])
@@ -33,8 +33,8 @@ def create():
     handler = initialise()
     if handler is not None and "CREATE" in handler.CAPABILITIES:
         if handler.SAVE_TICKET_DATA:
-            shared_sd.save_ticket_data_as_attachment(TICKET_DATA)
-        handler.create(TICKET_DATA)
+            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+        handler.create(shared.globals.TICKET_DATA)
     return ""
 
 
@@ -44,8 +44,8 @@ def comment():
     handler = initialise()
     if handler is not None and "COMMENT" in handler.CAPABILITIES:
         if handler.SAVE_TICKET_DATA:
-            shared_sd.save_ticket_data_as_attachment(TICKET_DATA)
-        handler.comment(TICKET_DATA)
+            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+        handler.comment(shared.globals.TICKET_DATA)
     return ""
 
 
@@ -59,27 +59,28 @@ def jira_hook():
         # possible for both assignee and status to change so we need
         # to check and call for both.
         assignee_result, assignee_from, assignee_to = shared_sd.\
-            trigger_is_assignment(TICKET_DATA)
+            trigger_is_assignment(shared.globals.TICKET_DATA)
         status_result, status_from, status_to = shared_sd.\
-            trigger_is_transition(TICKET_DATA)
+            trigger_is_transition(shared.globals.TICKET_DATA)
         if (handler.SAVE_TICKET_DATA and
                 (("TRANSITION" in handler.CAPABILITIES and status_result) or
                  ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
-            shared_sd.save_ticket_data_as_attachment(TICKET_DATA)
+            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
         if "TRANSITION" in handler.CAPABILITIES and status_result:
-            handler.transition(status_from, status_to, TICKET_DATA)
+            handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
         if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
-            handler.assignment(assignee_from, assignee_to, TICKET_DATA)
+            handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
     return ""
 
 
 def initialise():
     """ Initialise code and variables for this event. """
-    global TICKET_DATA  # pylint: disable=global-statement
-    TICKET_DATA = json.loads(request.data)
-    shared_sd.initialise(TICKET_DATA)
+    shared.globals.intialise_config()
+    shared.globals.initialise_ticket_data(request.data)
+    shared.globals.initialise_shared_sd()
+    shared.globals.initialise_sd_auth()
     # Get the request type for this data
-    reqtype = "rt%s" % shared_sd.ticket_request_type(TICKET_DATA)
+    reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
     # See if there is a module for this request type. If there is,
     # import it.
     dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"

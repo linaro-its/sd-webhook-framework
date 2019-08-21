@@ -25,31 +25,12 @@ the dictionary we want.
 
 import os
 import json
-import shared.shared_sd as shared_sd
-import shared.config as config
+import requests
+import shared.globals
 
 
-class CustomFieldsError(Exception):
-    """ Base exception class for the Custom Fields code. """
-
-
-class MissingCFConfig(CustomFieldsError):
-    """ Some part of the CF config is missing. """
-
-
+# Not in "globals" because only this module needs to reference it.
 CF_CACHE = None
-
-
-def validate_cf_config():
-    """ Raise exceptions if the configuration has problems. """
-    if config.CONFIGURATION is None:
-        config.initialise()
-    if "cf_use_plugin_api" not in config.CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_use_plugin_api' in config")
-    if "cf_use_cloud_api" not in config.CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
-    if "cf_cachefile" not in config.CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_cachefile' in config")
 
 
 def initialise_cf_cache():
@@ -57,27 +38,53 @@ def initialise_cf_cache():
     global CF_CACHE  # pylint: disable=global-statement
     if CF_CACHE is None:
         # Load the cache from the file
-        if os.path.isfile(config.CONFIGURATION["cf_cachefile"]):
-            with open(config.CONFIGURATION["cf_cachefile"], "r") as handle:
+        if os.path.isfile(shared.globals.CONFIGURATION["cf_cachefile"]):
+            with open(shared.globals.CONFIGURATION["cf_cachefile"], "r") as handle:
                 CF_CACHE = json.load(handle)
         else:
             CF_CACHE = {}
+
+
+def service_desk_request_get(url):
+    """Centralised routine to GET from Service Desk."""
+    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
+    return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
+
+
+def get_customfield_id_from_plugin(field_name):
+    """ Using the CF Editor plugin, return the ID for a given CF name. """
+    result = service_desk_request_get(
+        "%s/rest/jiracustomfieldeditorplugin/1/admin/customfields" % shared.globals.ROOT_URL
+    )
+    if result.status_code == 200:
+        fields = result.json()
+        for field in fields:
+            if field["fieldName"] == field_name:
+                return field["fieldId"]
+    else:
+        print("Got status %s when requesting custom field %s" % (
+            result.status_code, field_name))
+        # Try to get the human readable error message
+        fields = result.json()
+        if "message" in fields:
+            print(fields["message"])
+    return None
 
 
 def fetch_cf_value(name):
     """ If the specified name is not in the cache, look it up to get the ID. """
     if name not in CF_CACHE:
         # Are we using the REST API?
-        if config.CONFIGURATION["cf_use_plugin_api"]:
+        if shared.globals.CONFIGURATION["cf_use_plugin_api"]:
             # Fetch the custom field from the plugin
-            value = shared_sd.get_customfield_id_from_plugin(name)
+            value = get_customfield_id_from_plugin(name)
             # Only save it away if it is a value
             if value is not None:
                 CF_CACHE[name] = value
                 # And resave to file
-                with open(config.CONFIGURATION["cf_cachefile"], "w") as handle:
+                with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
                     json.dump(CF_CACHE, handle)
-        elif config.CONFIGURATION["cf_use_cloud_api"]:
+        elif shared.globals.CONFIGURATION["cf_use_cloud_api"]:
             # pylint: disable=fixme
             # TODO: extend for Cloud API
             raise NotImplementedError
@@ -86,7 +93,6 @@ def fetch_cf_value(name):
 def get(name):
     """ Get the ID for the given custom field name. """
     global CF_CACHE  # pylint: disable=global-statement
-    validate_cf_config()
     initialise_cf_cache()
     fetch_cf_value(name)
     if name in CF_CACHE:
