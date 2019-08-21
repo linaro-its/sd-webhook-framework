@@ -8,239 +8,13 @@ import responses
 from requests.auth import HTTPBasicAuth
 
 import shared.shared_sd as shared_sd
-import shared.config as config
-
-
-def test_initialise_1():
-    """ Test the initialisation. """
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise({})
-
-
-def test_initialise_2():
-    """ Test initialisation with a malformed issue. """
-    data = {
-        "issue": {}
-    }
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise(data)
-
-
-def test_initialise_3():
-    """ Test initialisation with a different malformed issue. """
-    data = {
-        "issue": {
-            "self": "self"
-        }
-    }
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise(data)
-
-
-def test_initialise_4():
-    """ Test initialisation with a different malformed issue. """
-    data = {
-        "issue": {
-            "self": "self",
-            "key": "key"
-        }
-    }
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise(data)
-
-
-def test_initialise_5():
-    """ Test initialisation with a different malformed issue. """
-    data = {
-        "issue": {
-            "self": "self",
-            "key": "key",
-            "fields": {}
-        }
-    }
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise(data)
-
-
-def test_initialise_6():
-    """ Test initialisation with a different malformed issue. """
-    data = {
-        "issue": {
-            "self": "self",
-            "key": "key",
-            "fields": {
-                "project": {}
-            }
-        }
-    }
-    with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.initialise(data)
-
-
-def test_initialise_valid_data():
-    """ Test initialisation with valid issue data. """
-    data = {
-        "issue": {
-            "self": "https://sd-server/rest/api/2/issue/21702",
-            "key": "ITS-6895",
-            "fields": {
-                "project": {
-                    "key": "ITS"
-                }
-            }
-        }
-    }
-    shared_sd.initialise(data)
-    assert shared_sd.ROOT_URL == "https://sd-server"
-    assert shared_sd.TICKET == "ITS-6895"
-    assert shared_sd.PROJECT == "ITS"
-
-
-def test_simple_credentials():
-    """ Test that credential handling works. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "bot_password": "password"
-    }
-    name, password = shared_sd.sd_auth_credentials()
-    assert name == "name"
-    assert password == "password"
-
-
-@mock.patch(
-    'shared.shared_sd.vault_auth.get_secret',
-    return_value={
-        "data": {
-            "pw": "vault_password"
-        }
-    },
-    autospec=True
-)
-def test_vault_credentials(mock_get_secret):
-    """ Test credentials against the vault. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "vault_bot_name": "bot_name",
-        "vault_iam_role": "role",
-        "vault_server_url": "url"
-    }
-    name, password = shared_sd.sd_auth_credentials()
-    # Make sure that our mock version of get_secret got called
-    assert mock_get_secret.called is True
-    assert name == "name"
-    assert password == "vault_password"
-
-
-def dummy_config_initialise():
-    """ Set up some dummy config. """
-    config.CONFIGURATION = {}
-
-
-@mock.patch(
-    'shared.shared_sd.config.initialise',
-    side_effect=dummy_config_initialise,
-    autospec=True
-)
-def test_missing_credentials_2(mock_config_initialise):
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = None
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-    assert mock_config_initialise.called is True
-
-
-def test_missing_credentials_3():
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = {
-        "bot_name": "name"
-    }
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_missing_credentials_4():
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "vault_iam_role": "role"
-    }
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_missing_credentials_5():
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "vault_iam_role": "role",
-        "vault_server_url": "url"
-    }
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_missing_credentials_6():
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "vault_iam_role": "role",
-        "vault_bot_name": "bot"
-    }
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_missing_credentials_7():
-    """ Test behaviour when credentials are missing. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "vault_bot_name": "bot",
-        "vault_server_url": "url"
-    }
-    with pytest.raises(shared_sd.MissingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_overlapping_credentials_1():
-    """ Test behaviour when multiple types of credentials are present. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "bot_password": "password",
-        "vault_iam_role": "role"
-    }
-    with pytest.raises(shared_sd.OverlappingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-def test_overlapping_credentials_2():
-    """ Test behaviour when multiple types of credentials are present. """
-    config.CONFIGURATION = {
-        "bot_name": "name",
-        "bot_password": "password",
-        "vault_server_url": "url"
-    }
-    with pytest.raises(shared_sd.OverlappingCredentials):
-        shared_sd.sd_auth_credentials()
-
-
-@mock.patch(
-    'shared.shared_sd.sd_auth_credentials',
-    return_value=["name", "password"],
-    autospec=True
-)
-def test_get_sd_auth(mock_sd_auth_credentials):
-    """ Check that get_sd_auth returns a valid HTTPBasicAuth. """
-    shared_sd.SD_AUTH = None
-    result = shared_sd.get_sd_auth()
-    compare = HTTPBasicAuth("name", "password")
-    assert result == compare
-    assert mock_sd_auth_credentials.called is True
+import shared.globals
 
 
 @responses.activate
 def test_get_servicedesk_id_1():
     """ Check the code correctly determines a project's ID. """
-    shared_sd.ROOT_URL = "https://mock-server"
+    shared.globals.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -261,7 +35,7 @@ def test_get_servicedesk_id_1():
 @responses.activate
 def test_get_servicedesk_id_2():
     """ Test behaviour when the project ID cannot be matched. """
-    shared_sd.ROOT_URL = "https://mock-server"
+    shared.globals.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -282,7 +56,7 @@ def test_get_servicedesk_id_2():
 @responses.activate
 def test_get_servicedesk_id_3():
     """ Test behaviour when the credentials are invalid. """
-    shared_sd.ROOT_URL = "https://mock-server"
+    shared.globals.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/servicedeskapi/servicedesk",
@@ -296,7 +70,7 @@ def test_get_servicedesk_id_3():
 @responses.activate
 def test_sd_request_get():
     """ Test calls to service_desk_request_get. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.GET,
         "https://mock-server/rest/api/foobar",
@@ -322,7 +96,7 @@ def test_sd_request_get():
 @responses.activate
 def test_sd_request_post():
     """ Test calls to service_desk_request_post. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.POST,
         "https://mock-server/rest/api/foobar",
@@ -348,7 +122,7 @@ def test_sd_request_post():
 @responses.activate
 def test_sd_request_put():
     """ Test calls to service_desk_request_put. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
     responses.add(
         responses.PUT,
         "https://mock-server/rest/api/foobar",
@@ -396,8 +170,8 @@ def test_save_as_attachment_bad_project(mock_get_servicedesk_id):
 @responses.activate
 def test_save_as_attachment_bad_status(mock_get_servicedesk_id):
     """ Test handling of a bad status when saving attachment. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
-    shared_sd.ROOT_URL = "https://mock-server"
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/servicedesk/3"
@@ -426,9 +200,9 @@ def test_save_as_attachment_bad_status(mock_get_servicedesk_id):
 @responses.activate
 def test_save_as_attachment_good_status(mock_get_servicedesk_id):
     """ Test handling of saving attachment. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
-    shared_sd.ROOT_URL = "https://mock-server"
-    shared_sd.TICKET = "ITS-1"
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "ITS-1"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/servicedesk/3"
@@ -463,54 +237,8 @@ def test_save_as_attachment_good_status(mock_get_servicedesk_id):
     assert result == 200
 
 
-@responses.activate
-def test_get_cf_id_from_plugin():
-    """ Test using the plugin to get a custom field ID. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
-    shared_sd.ROOT_URL = "https://mock-server"
-    responses.add(
-        responses.GET,
-        "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
-        "customfields",
-        json=[
-            {
-                "fieldId": 10100,
-                "fieldName": "Customer Request Type",
-                "fieldType": "com.atlassian.servicedesk:vp-origin",
-                "fieldDescription": (
-                    "Holds information about which Service Desk was used "
-                    "to create a ticket. This custom field is created "
-                    "programmatically and must not be modified.")
-            }
-        ],
-        status=200
-    )
-    result = shared_sd.get_customfield_id_from_plugin("foo")
-    assert result is None
-    result = shared_sd.get_customfield_id_from_plugin("Customer Request Type")
-    assert result == 10100
-
-
-@responses.activate
-def test_denied_cf_id_from_plugin():
-    """ Test handling of access denied from the plugin. """
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
-    shared_sd.ROOT_URL = "https://mock-server"
-    responses.add(
-        responses.GET,
-        "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
-        "customfields",
-        json={
-            "message": "Access denied"
-        },
-        status=403
-    )
-    result = shared_sd.get_customfield_id_from_plugin("foo")
-    assert result is None
-
-
 @mock.patch(
-    'shared.shared_sd.get_customfield_id_from_plugin',
+    'shared.custom_fields.get',
     return_value=None
 )
 def test_ticket_request_type_1(mock_get_cf_id):
@@ -521,7 +249,7 @@ def test_ticket_request_type_1(mock_get_cf_id):
 
 
 @mock.patch(
-    'shared.shared_sd.get_customfield_id_from_plugin',
+    'shared.custom_fields.get',
     return_value=10100
 )
 def test_ticket_request_type_2(mock_get_cf_id):
@@ -537,7 +265,7 @@ def test_ticket_request_type_2(mock_get_cf_id):
 
 
 @mock.patch(
-    'shared.shared_sd.get_customfield_id_from_plugin',
+    'shared.custom_fields.get',
     return_value=10100
 )
 def test_ticket_request_type_3(mock_get_cf_id):
@@ -690,7 +418,7 @@ def test_automation_triggered_comment():
     data = {
         "comment": {
             "author": {
-                "name": config.CONFIGURATION["bot_name"]
+                "name": shared.globals.CONFIGURATION["bot_name"]
             }
         }
     }
@@ -726,7 +454,7 @@ def test_save_ticket_data_as_attachment_2(
     data = {
         "comment": {
             "author": {
-                "name": config.CONFIGURATION["bot_name"]
+                "name": shared.globals.CONFIGURATION["bot_name"]
             }
         }
     }

@@ -10,7 +10,9 @@ import mock
 # the test code isn't able to import it.
 sys.path.insert(0, os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
-import app  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+import app
+import shared.globals
 
 
 def test_hello_world():
@@ -20,12 +22,19 @@ def test_hello_world():
 
 
 @mock.patch(
-    'app.json.loads',
-    return_value={},
+    'app.shared.globals.initialise_config',
     autospec=True
 )
 @mock.patch(
-    'app.shared_sd.initialise',
+    'app.shared.globals.initialise_ticket_data',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_shared_sd',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_sd_auth',
     autospec=True
 )
 @mock.patch(
@@ -33,26 +42,35 @@ def test_hello_world():
     return_value="206",
     autospec=True
 )
-def test_initialise(mock_rt, mock_init, mock_jloads):
+def test_initialise(mock_rt, mi1, mi2, mi3, mi4):
     """ Test the app initialisation. """
-    # The app code includes a variable called app, so reference that
+    # The app code includes a variable called APP, so reference that
     # as flask_app to make the code clearer.
     flask_app = app.APP
     with flask_app.test_request_context('/'):
         test_result = app.initialise()
         assert mock_rt.called is True
-        assert mock_init.called is True
-        assert mock_jloads.called is True
+        assert mi1.called is True
+        assert mi2.called is True
+        assert mi3.called is True
+        assert mi4.called is True
         assert test_result is not None
 
 
 @mock.patch(
-    'app.json.loads',
-    return_value={},
+    'app.shared.globals.initialise_config',
     autospec=True
 )
 @mock.patch(
-    'app.shared_sd.initialise',
+    'app.shared.globals.initialise_ticket_data',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_shared_sd',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_sd_auth',
     autospec=True
 )
 @mock.patch(
@@ -60,7 +78,7 @@ def test_initialise(mock_rt, mock_init, mock_jloads):
     return_value="-1",
     autospec=True
 )
-def test_initialise_missing_handler(mock_rt, mock_init, mock_jloads):
+def test_initialise_missing_handler(mock_rt, mi1, mi2, mi3, mi4):
     """ Test handling of a handler that needs to be loaded. """
     # The app code includes a variable called app, so reference that
     # as flask_app to make the code clearer.
@@ -68,18 +86,27 @@ def test_initialise_missing_handler(mock_rt, mock_init, mock_jloads):
     with flask_app.test_request_context('/'):
         test_result = app.initialise()
         assert mock_rt.called is True
-        assert mock_init.called is True
-        assert mock_jloads.called is True
+        assert mi1.called is True
+        assert mi2.called is True
+        assert mi3.called is True
+        assert mi4.called is True
         assert test_result is None
 
 
 @mock.patch(
-    'app.json.loads',
-    return_value={},
+    'app.shared.globals.initialise_config',
     autospec=True
 )
 @mock.patch(
-    'app.shared_sd.initialise',
+    'app.shared.globals.initialise_ticket_data',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_shared_sd',
+    autospec=True
+)
+@mock.patch(
+    'app.shared.globals.initialise_sd_auth',
     autospec=True
 )
 @mock.patch(
@@ -87,7 +114,7 @@ def test_initialise_missing_handler(mock_rt, mock_init, mock_jloads):
     return_value="-1",
     autospec=True
 )
-def test_initialise_missing_path(mock_rt, mock_init, mock_jloads):
+def test_initialise_missing_path(mock_rt, mi1, mi2, mi3, mi4):
     """ Test the code that adds the path to the handlers. """
     # The app code includes a variable called app, so reference that
     # as flask_app to make the code clearer.
@@ -105,8 +132,10 @@ def test_initialise_missing_path(mock_rt, mock_init, mock_jloads):
         sys.path.remove(dir_path)
         test_result = app.initialise()
         assert mock_rt.called is True
-        assert mock_init.called is True
-        assert mock_jloads.called is True
+        assert mi1.called is True
+        assert mi2.called is True
+        assert mi3.called is True
+        assert mi4.called is True
         assert test_result is None
 
 
@@ -125,7 +154,7 @@ class MockHandlerWithSaveTicketData:
 
     @staticmethod
     def create(ticket_data):
-        """ Create handler. """
+        """ Create hvandler. """
         print("Create function called with %s" % ticket_data)
 
     @staticmethod
@@ -233,7 +262,7 @@ def test_jira_hook_transition(capsys):
 
 def test_comment(capsys):
     """ Test comment handling. """
-    app.TICKET_DATA = "ticket data"
+    shared.globals.TICKET_DATA = "ticket data"
     with patch.object(
             app,
             'initialise',
@@ -250,7 +279,7 @@ def test_comment(capsys):
 
 def test_create(capsys):
     """ Test create handling. """
-    app.TICKET_DATA = "ticket data"
+    shared.globals.TICKET_DATA = "ticket data"
     with patch.object(
             app,
             'initialise',

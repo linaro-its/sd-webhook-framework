@@ -59,7 +59,7 @@ def initialise_shared_sd():
     TICKET = TICKET_DATA["issue"]["key"]
     PROJECT = TICKET_DATA["issue"]["fields"]["project"]["key"]
 
-def intialise_config():
+def initialise_config():
     """ Read the JSON configuration file into a global JSON blob. """
     global CONFIGURATION
     # All of the webhook code is in a sub-directory so we

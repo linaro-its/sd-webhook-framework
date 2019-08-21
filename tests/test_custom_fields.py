@@ -1,73 +1,66 @@
 #!/usr/bin/python3
-""" Test sd_webhook_automation/custom_fields. """
+""" Test shared/custom_fields. """
 
-import os
-import sys
 import json
 from requests.auth import HTTPBasicAuth
 
 import mock
 from mock import mock_open, patch
-import pytest
 import responses
 
-import shared.config as config
-import shared.shared_sd as shared_sd
+import shared.globals
 import shared.custom_fields as custom_fields
 
 
 def dummy_config_initialise():
     """ Provide some dummy config. """
-    config.CONFIGURATION = {}
+    shared.globals.CONFIGURATION = {}
 
 
-@mock.patch(
-    'shared.custom_fields.config.initialise',
-    side_effect=dummy_config_initialise,
-    autospec=True
-)
-def test_get_1(mock_config_initialise):
-    """ Test getting a value from the config. """
-    config.CONFIGURATION = None
-    with pytest.raises(custom_fields.MissingCFConfig):
-        custom_fields.get("foo")
-    assert mock_config_initialise.called is True
+@responses.activate
+def test_get_cf_id_from_plugin():
+    """ Test using the plugin to get a custom field ID. """
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
+        "customfields",
+        json=[
+            {
+                "fieldId": 10100,
+                "fieldName": "Customer Request Type",
+                "fieldType": "com.atlassian.servicedesk:vp-origin",
+                "fieldDescription": (
+                    "Holds information about which Service Desk was used "
+                    "to create a ticket. This custom field is created "
+                    "programmatically and must not be modified.")
+            }
+        ],
+        status=200
+    )
+    result = custom_fields.get_customfield_id_from_plugin("foo")
+    assert result is None
+    result = custom_fields.get_customfield_id_from_plugin("Customer Request Type")
+    assert result == 10100
 
 
-def test_get_2():
-    """ Test more config retrieval. """
-    config.CONFIGURATION = {}
-    with pytest.raises(custom_fields.MissingCFConfig):
-        custom_fields.get("foo")
-    config.CONFIGURATION = {
-        "cf_use_plugin_api": False
-    }
-    with pytest.raises(custom_fields.MissingCFConfig):
-        custom_fields.get("foo")
-    config.CONFIGURATION = {
-        "cf_use_plugin_api": False,
-        "cf_use_cloud_api": False
-    }
-    with pytest.raises(custom_fields.MissingCFConfig):
-        custom_fields.get("foo")
-
-
-@mock.patch(
-    'shared.custom_fields.os.path.isfile',
-    return_value=False,
-    autospec=True
-)
-def test_get_cloud_exception(mock_os_path_isfile):
-    """ Test that we get an exception when trying to use the cloud service. """
-    config.CONFIGURATION = {
-        "cf_use_plugin_api": False,
-        "cf_use_cloud_api": True,
-        "cf_cachefile": "/tmp/cf_cachefile"
-    }
-    # Stop pylint complaining that we don't use the argument
-    _ = mock_os_path_isfile
-    with pytest.raises(NotImplementedError):
-        custom_fields.get("foo")
+@responses.activate
+def test_denied_cf_id_from_plugin():
+    """ Test handling of access denied from the plugin. """
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
+        "customfields",
+        json={
+            "message": "Access denied"
+        },
+        status=403
+    )
+    result = custom_fields.get_customfield_id_from_plugin("foo")
+    assert result is None
 
 
 @mock.patch(
@@ -77,7 +70,7 @@ def test_get_cloud_exception(mock_os_path_isfile):
 )
 def test_get_3(mock_os_path_isfile):
     """ Test behaviour with cache file config. """
-    config.CONFIGURATION = {
+    shared.globals.CONFIGURATION = {
         "cf_use_plugin_api": False,
         "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
@@ -100,7 +93,7 @@ MOCK_CF_CACHE = {
 )
 def test_get_4(mock_os_path_isfile):
     """ Test retrieval from a cache file. """
-    config.CONFIGURATION = {
+    shared.globals.CONFIGURATION = {
         "cf_use_plugin_api": False,
         "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
@@ -127,14 +120,14 @@ def test_get_4(mock_os_path_isfile):
 @responses.activate
 def test_get_5(mock_os_path_isfile):
     """ Check that the cache file gets updated. """
-    config.CONFIGURATION = {
+    shared.globals.CONFIGURATION = {
         "cf_use_plugin_api": True,
         "cf_use_cloud_api": False,
         "cf_cachefile": "/tmp/cf_cachefile"
     }
     custom_fields.CF_CACHE = None
-    shared_sd.SD_AUTH = HTTPBasicAuth("name", "password")
-    shared_sd.ROOT_URL = "https://mock-server"
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
     responses.add(
         responses.GET,
         "https://mock-server/rest/jiracustomfieldeditorplugin/1/admin/"
