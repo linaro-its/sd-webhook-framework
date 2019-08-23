@@ -163,6 +163,25 @@ def usable_ticket_data(ticket_data):
     return True
 
 
+def post_comment(comment, public_switch):
+    """ Post a comment to the current issue. """
+    new_comment = {}
+    new_comment['body'] = comment
+    new_comment['public'] = public_switch
+    json_comment = json.dumps(new_comment)
+    # Quietly ignore any errors returned. If we can't comment, we can't do
+    # much!
+    result = service_desk_request_post(
+        "%s/rest/servicedeskapi/request/%s/comment" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET_DATA),
+        json_comment
+    )
+    # Trying to figure out why some comments go missing ...
+    if result.status_code != 201:
+        print("Got status code %s in post_comment" % result.status_code)
+        print(comment)
+
+
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
