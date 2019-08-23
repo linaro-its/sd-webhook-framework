@@ -1,7 +1,9 @@
 {
     // Configuration for the custom fields code.
-    // Specify a JSON file to be used as the cache of IDs for custom fields.
-    "cf_cachefile": "~/cf_cachefile.json",
+    // Specify a JSON file to be used as the cache of IDs for custom fields. Note that
+    // if this is left commented out, the code will default to using the cf_cachefile
+    // that is included in the repo.
+    // "cf_cachefile": "~/cf_cachefile.json",
     // If the Custom Field Editor plugin is installed, do you want to use it?
     "cf_use_plugin_api": "False",
     // This has to be False at the moment. Code to support getting CF IDs from
