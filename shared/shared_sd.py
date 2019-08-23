@@ -179,7 +179,9 @@ def post_comment(comment, public_switch):
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
         print("Got status code %s in post_comment" % result.status_code)
-        print(comment)
+        print("Url: %s/rest/servicedeskapi/request/%s/comment" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET_DATA))
+        print("Comment: %s" % comment)
 
 
 def service_desk_request_get(url):
