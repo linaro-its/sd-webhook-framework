@@ -157,7 +157,7 @@ def usable_ticket_data(ticket_data):
     if "issue_event_type_name" not in ticket_data:
         return False
     ietn = ticket_data["issue_event_type_name"]
-    if ietn != "issue_assigned" and ietn != "issue_generic":
+    if ietn not in ("issue_assigned", "issue_generic"):
         return False
     # It should be valid from hereon in
     return True
@@ -173,14 +173,14 @@ def post_comment(comment, public_switch):
     # much!
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/comment" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET_DATA),
+            shared.globals.ROOT_URL, shared.globals.TICKET),
         json_comment
     )
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
         print("Got status code %s in post_comment" % result.status_code)
         print("Url: %s/rest/servicedeskapi/request/%s/comment" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET_DATA))
+            shared.globals.ROOT_URL, shared.globals.TICKET))
         print("Comment: %s" % comment)
 
 
