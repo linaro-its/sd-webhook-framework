@@ -99,14 +99,19 @@ def initialise():
     shared.globals.initialise_ticket_data(request.data)
     shared.globals.initialise_shared_sd()
     shared.globals.initialise_sd_auth()
-    # Get the request type for this data
-    reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
-    # See if there is a module for this request type. If there is,
-    # import it.
-    dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
-    if os.path.isdir(dir_path):
-        if dir_path not in sys.path:
-            sys.path.insert(0, dir_path)
-        if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
-            return importlib.import_module(reqtype)
+    try:
+        # Get the request type for this data
+        reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
+    except shared_sd.CustomFieldLookupFailure as caught_error:
+        shared_sd.post_comment("%s. Please check the configuration and logs." % str(caught_error), False)
+        reqtype = None
+    if reqtype is not None:
+        # See if there is a module for this request type. If there is,
+        # import it.
+        dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
+        if os.path.isdir(dir_path):
+            if dir_path not in sys.path:
+                sys.path.insert(0, dir_path)
+            if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
+                return importlib.import_module(reqtype)
     return None
