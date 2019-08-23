@@ -67,7 +67,9 @@ def validate_cf_config():
     if "cf_use_cloud_api" not in CONFIGURATION:
         raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
     if "cf_cachefile" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_cachefile' in config")
+        # Default to using the cache file in the repo.
+        basedir = os.path.dirname(os.path.dirname(__file__))
+        CONFIGURATION["cf_cachefile"] = "%s/cf_cachefile" % basedir
 
 
 def validate_vault_tag(tag, required):
