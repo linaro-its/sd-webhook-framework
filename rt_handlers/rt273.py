@@ -11,11 +11,16 @@ RT273_SPECIAL_REQUEST = 12324
 # Define what this handler can handle :)
 # Using strings avoids the need to access defines elsewhere.
 CAPABILITIES = [
-    "TRANSITION"
+    "TRANSITION", "COMMENT"
 ]
 
 
 SAVE_TICKET_DATA = True
+
+def comment(ticket_data):
+    """ Comment handler. """
+    _ = ticket_data
+    print("Comment function has been called")
 
 
 def create_ldap_account(ticket_data):
