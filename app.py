@@ -103,7 +103,10 @@ def initialise():
         # Get the request type for this data
         reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
     except shared_sd.CustomFieldLookupFailure as caught_error:
-        shared_sd.post_comment("%s. Please check the configuration and logs." % str(caught_error), False)
+        shared_sd.post_comment(
+            "%s. Please check the configuration and logs." % str(caught_error),
+            False
+        )
         reqtype = None
     if reqtype is not None:
         # See if there is a module for this request type. If there is,
