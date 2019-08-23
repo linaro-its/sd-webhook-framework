@@ -5,6 +5,7 @@ import os
 import sys
 from unittest.mock import patch
 import mock
+import pytest
 
 # Tell Python where to find the webhook automation code otherwise
 # the test code isn't able to import it.
@@ -154,7 +155,7 @@ class MockHandlerWithSaveTicketData:
 
     @staticmethod
     def create(ticket_data):
-        """ Create hvandler. """
+        """ Create handler. """
         print("Create function called with %s" % ticket_data)
 
     @staticmethod
@@ -292,3 +293,99 @@ def test_create(capsys):
             assert mock_save_ticket.called is True
             captured = capsys.readouterr()
             assert captured.out == "Create function called with ticket data\n"
+
+class ExceptionMockHandler:
+    """ A mock handler class. """
+    SAVE_TICKET_DATA = True
+    CAPABILITIES = ["TRANSITION", "ASSIGNMENT", "CREATE", "COMMENT"]
+
+    @staticmethod
+    def create(ticket_data):
+        """ Create handler. """
+        raise shared.globals.MalformedIssueError("Fake exception")
+
+    @staticmethod
+    def comment(ticket_data):
+        """ Comment handler. """
+        raise shared.globals.MalformedIssueError("Fake exception")
+
+    @staticmethod
+    def transition(status_from, status_to, ticket_data):
+        """ Transition handler. """
+        raise shared.globals.MalformedIssueError("Fake exception")
+
+    @staticmethod
+    def assignment(assignee_from, assignee_to, ticket_data):
+        """ Assignment handler. """
+        raise shared.globals.MalformedIssueError("Fake exception")
+
+@mock.patch(
+    'app.shared_sd.save_ticket_data_as_attachment',
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.post_comment',
+    autospec=True
+)
+def test_create_exception_handling(mi1, mi2):
+    """ Test handling of exceptions in create event. """
+    with patch.object(
+            app,
+            'initialise',
+            return_value=ExceptionMockHandler()):
+        app.create()
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@mock.patch(
+    'app.shared_sd.automation_triggered_comment',
+    return_value=False,
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.save_ticket_data_as_attachment',
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.post_comment',
+    autospec=True
+)
+def test_comment_exception_handling(mi1, mi2, mi3):
+    """ Test handling of exceptions in comment event. """
+    with patch.object(
+            app,
+            'initialise',
+            return_value=ExceptionMockHandler()):
+        app.comment()
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+
+@mock.patch(
+    'app.shared_sd.save_ticket_data_as_attachment',
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.post_comment',
+    autospec=True
+)
+def test_jira_hook_exception_handling(mi1, mi2):
+    """ Test handling of exceptions in jira_hook event. """
+    with patch.object(
+            app,
+            'initialise',
+            return_value=ExceptionMockHandler()):
+        with patch.object(
+                app.shared_sd,
+                'trigger_is_assignment',
+                return_value=(False, None, None)
+                ):
+            with patch.object(
+                    app.shared_sd,
+                    'trigger_is_transition',
+                    return_value=(True, "status_from", "status_to")
+                ):
+                app.jira_hook()
+    assert mi1.called is True
+    assert mi2.called is True

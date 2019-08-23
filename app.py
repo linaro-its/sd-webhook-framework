@@ -32,20 +32,34 @@ def create():
     """ Triggered when a ticket is created. """
     handler = initialise()
     if handler is not None and "CREATE" in handler.CAPABILITIES:
-        if handler.SAVE_TICKET_DATA:
-            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
-        handler.create(shared.globals.TICKET_DATA)
+        try:
+            if handler.SAVE_TICKET_DATA:
+                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            handler.create(shared.globals.TICKET_DATA)
+        except Exception as caught_error:  # pylint: disable=broad-except
+            shared_sd.post_comment(
+                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                False
+            )
     return ""
 
 
 @APP.route('/comment', methods=['POST'])
 def comment():
-    """ Triggered when a comment is added to a ticket. """
+    """ Triggered when a non-automation comment is added to a ticket. """
     handler = initialise()
-    if handler is not None and "COMMENT" in handler.CAPABILITIES:
-        if handler.SAVE_TICKET_DATA:
-            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
-        handler.comment(shared.globals.TICKET_DATA)
+    if (handler is not None and
+            "COMMENT" in handler.CAPABILITIES and
+            not shared_sd.automation_triggered_comment(shared.globals.TICKET_DATA)):
+        try:
+            if handler.SAVE_TICKET_DATA:
+                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            handler.comment(shared.globals.TICKET_DATA)
+        except Exception as caught_error:  # pylint: disable=broad-except
+            shared_sd.post_comment(
+                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                False
+            )
     return ""
 
 
@@ -62,14 +76,20 @@ def jira_hook():
             trigger_is_assignment(shared.globals.TICKET_DATA)
         status_result, status_from, status_to = shared_sd.\
             trigger_is_transition(shared.globals.TICKET_DATA)
-        if (handler.SAVE_TICKET_DATA and
-                (("TRANSITION" in handler.CAPABILITIES and status_result) or
-                 ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
-            shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
-        if "TRANSITION" in handler.CAPABILITIES and status_result:
-            handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
-        if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
-            handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
+        try:
+            if (handler.SAVE_TICKET_DATA and
+                    (("TRANSITION" in handler.CAPABILITIES and status_result) or
+                     ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
+                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            if "TRANSITION" in handler.CAPABILITIES and status_result:
+                handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
+            if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
+                handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
+        except Exception as caught_error:  # pylint: disable=broad-except
+            shared_sd.post_comment(
+                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                False
+            )
     return ""
 
 

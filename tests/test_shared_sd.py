@@ -68,6 +68,34 @@ def test_get_servicedesk_id_3():
 
 
 @responses.activate
+def test_post_comment():
+    """ Test post_comment function. """
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET_DATA = "1"
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/servicedeskapi/request/1/comment",
+        status=201
+    )
+    shared_sd.post_comment("Comment", True)
+
+
+@responses.activate
+def test_post_comment_failure():
+    """ Test behaviour when error back from POST. """
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET_DATA = "1"
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/servicedeskapi/request/1/comment",
+        status=404
+    )
+    shared_sd.post_comment("Comment", True)
+
+
+@responses.activate
 def test_sd_request_get():
     """ Test calls to service_desk_request_get. """
     shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
