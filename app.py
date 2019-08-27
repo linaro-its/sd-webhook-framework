@@ -93,12 +93,8 @@ def jira_hook():
     return ""
 
 
-def initialise():
-    """ Initialise code and variables for this event. """
-    shared.globals.initialise_config()
-    shared.globals.initialise_ticket_data(request.data)
-    shared.globals.initialise_shared_sd()
-    shared.globals.initialise_sd_auth()
+def initialise_handler():
+    """ Load the Python code handling this request type if possible. """
     try:
         # Get the request type for this data
         reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
@@ -117,4 +113,14 @@ def initialise():
                 sys.path.insert(0, dir_path)
             if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
                 return importlib.import_module(reqtype)
+            print("Called to handle %s but no handler found." % reqtype)
     return None
+
+
+def initialise():
+    """ Initialise code and variables for this event. """
+    shared.globals.initialise_config()
+    shared.globals.initialise_ticket_data(request.data)
+    shared.globals.initialise_shared_sd()
+    shared.globals.initialise_sd_auth()
+    return initialise_handler()

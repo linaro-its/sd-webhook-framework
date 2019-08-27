@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(
 # pylint: disable=wrong-import-position
 import app
 import shared.globals
+import shared.shared_sd
 
 
 def test_hello_world():
@@ -92,6 +93,23 @@ def test_initialise_missing_handler(mock_rt, mi1, mi2, mi3, mi4):
         assert mi3.called is True
         assert mi4.called is True
         assert test_result is None
+
+
+@mock.patch(
+    'app.shared.shared_sd.ticket_request_type',
+    side_effect=shared.shared_sd.CustomFieldLookupFailure(),
+    autospec=True
+)
+@mock.patch(
+    'app.shared.shared_sd.post_comment',
+    autospec=True
+)
+def test_initialise_handler_exception(mi1, mi2):
+    """ Test handling of custom field lookup error. """
+    handler = app.initialise_handler()
+    assert mi1.called is True
+    assert mi2.called is True
+    assert handler is None
 
 
 @mock.patch(
