@@ -163,6 +163,26 @@ def usable_ticket_data(ticket_data):
     return True
 
 
+def get_field(ticket_data, field_id):
+    """ Return the required custom field if it is in the data. """
+    field_name = "customfield_%s" % field_id
+    if ("issue" in ticket_data and
+            "fields" in ticket_data["issue"] and
+            field_name in ticket_data["issue"]["fields"]):
+        return ticket_data["issue"]["fields"][field_name]
+    return None
+
+
+def reporter_email_address(ticket_data):
+    """ Get the reporter's email address from the ticket data. """
+    if ("issue" in ticket_data and
+            "fields" in ticket_data["issue"] and
+            "reporter" in ticket_data["issue"]["fields"] and
+            "emailAddress" in ticket_data["issue"]["fields"]["reporter"]):
+        return ticket_data["issue"]["fields"]["reporter"]["emailAddress"]
+    return None
+
+
 def post_comment(comment, public_switch):
     """ Post a comment to the current issue. """
     new_comment = {}

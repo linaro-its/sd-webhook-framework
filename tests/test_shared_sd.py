@@ -72,7 +72,7 @@ def test_post_comment():
     """ Test post_comment function. """
     shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
     shared.globals.ROOT_URL = "https://mock-server"
-    shared.globals.TICKET_DATA = "1"
+    shared.globals.TICKET = "1"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/request/1/comment",
@@ -86,7 +86,7 @@ def test_post_comment_failure():
     """ Test behaviour when error back from POST. """
     shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
     shared.globals.ROOT_URL = "https://mock-server"
-    shared.globals.TICKET_DATA = "1"
+    shared.globals.TICKET = "1"
     responses.add(
         responses.POST,
         "https://mock-server/rest/servicedeskapi/request/1/comment",
@@ -443,6 +443,9 @@ def test_automation_triggered_comment():
     result = shared_sd.automation_triggered_comment({})
     assert result is False
 
+    shared.globals.CONFIGURATION = {
+        "bot_name": "test_bot"
+    }
     data = {
         "comment": {
             "author": {
@@ -489,3 +492,32 @@ def test_save_ticket_data_as_attachment_2(
     shared_sd.save_ticket_data_as_attachment(data)
     assert mock_print.called is True
     assert mock_save_text_as_attachment.called is False
+
+def test_get_field():
+    """ Test get_field. """
+    assert shared_sd.get_field({}, "fred") is None
+    ticket_data = {
+        "issue": {
+            "fields": {
+                "customfield_123": "My value"
+            }
+        }
+    }
+    result = shared_sd.get_field(ticket_data, "123")
+    assert result == "My value"
+
+
+def test_reporter_email_address():
+    """ Test reporter_email_address. """
+    assert shared_sd.reporter_email_address({}) is None
+    ticket_data = {
+        "issue": {
+            "fields": {
+                "reporter": {
+                    "emailAddress": "My value"
+                }
+            }
+        }
+    }
+    result = shared_sd.reporter_email_address(ticket_data)
+    assert result == "My value"
