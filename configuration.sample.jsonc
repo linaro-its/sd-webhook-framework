@@ -1,23 +1,54 @@
 {
+    //
     // Configuration for the custom fields code.
+    //
     // Specify a JSON file to be used as the cache of IDs for custom fields. Note that
     // if this is left commented out, the code will default to using the cf_cachefile
     // that is included in the repo.
     // "cf_cachefile": "~/cf_cachefile.json",
+    //
     // If the Custom Field Editor plugin is installed, do you want to use it?
     "cf_use_plugin_api": "False",
+    //
     // This has to be False at the moment. Code to support getting CF IDs from
     // Jira Cloud has not yet been implemented.
     "cf_use_cloud_api": "False",
 
     //
-    // Configuration for the service desk code.
-    "bot_name": "valid-account-name",
-    // Either specify a password for the "bot" ...
-    // "bot_password": "valid-account-password",
-    // or specify the following Vault parameters if using
-    // Hashicorp Vault to store secrets.
-    // "vault_bot_name": "secret/blob/bot_name",
+    // Common Vault configuration items if Hashicorp Vault is being used to store
+    // secrets.
     // "vault_iam_role": "aws-iam-role",
     // "vault_server_url": "https://vault.example.com"
+
+    //
+    // Configuration for the service desk code.
+    "bot_name": "valid-account-name",
+    //
+    // Either specify a password for the "bot" ...
+    // "bot_password": "valid-account-password",
+    //
+    // or specify the following Vault parameter:
+    // "vault_bot_name": "secret/blob/bot_name",
+
+    //
+    // Configuration for LDAP access.
+    //
+    // Set to "False" if you don't use or need LDAP integration
+    "ldap_enabled": "True",
+    //
+    // Set this to be the name of your LDAP server.
+    "ldap_server": "ldaps://ldap-server",
+    //
+    // Set this to be the base DN that you want to use. Leave blank
+    // if you want the code to automatically determine the base DN.
+    "ldap_base_dn": "",
+    //
+    // Set this to be a user on LDAP with sufficient privileges.
+    "ldap_user": "valid-ldap-DN",
+    //
+    // Either specify a password for the ldap-user ...
+    // "ldap_password": "valid-ldap-password",
+    //
+    // or specify the following Vault parameter:
+    // "vault_ldap_name": "secret/blob/ldap_name",
 }
