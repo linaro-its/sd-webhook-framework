@@ -6,7 +6,7 @@ The credentials used by this code must be sufficient for all of
 the functions required, e.g. creating accounts.
 """
 
-from ldap3 import Server, Connection, SUBTREE, LEVEL, DSA
+from ldap3 import Server, Connection, SUBTREE, LEVEL, BASE, DSA, MODIFY_ADD
 from unidecode import unidecode
 import shared.globals
 
@@ -23,12 +23,12 @@ def get_ldap_connection():
     """ Return the shared LDAP connection, initialising first if required. """
     global CONNECTION  # pylint: disable=global-statement
     if CONNECTION is None:
-        if ("ldap_enabled" not in shared.globals.CONFIGURATION or
-                not shared.globals.CONFIGURATION["ldap_enabled"]):
+        enabled = shared.globals.config("ldap_enabled")
+        if enabled is None or not enabled:
             raise NotEnabledError()
         user, password = shared.globals.get_ldap_credentials()
         server = Server(
-            shared.globals.CONFIGURATION["ldap_server"],
+            shared.globals.config("ldap_server"),
             get_info=DSA
         )
         CONNECTION = Connection(
@@ -44,14 +44,25 @@ def base_dn():
     """ Return the base DN for this configuration. """
     global BASE_DN  # pylint: disable=global-statement
     if BASE_DN is None:
-        if ("ldap_base_dn" in shared.globals.CONFIGURATION and
-                shared.globals.CONFIGURATION["ldap_base_dn"] != ""):
-            BASE_DN = shared.globals.CONFIGURATION["ldap_base_dn"]
-        else:
+        BASE_DN = shared.globals.config("ldap_base_dn")
+        if BASE_DN is None or BASE_DN == "":
             with get_ldap_connection() as conn:
                 bases = conn.server.info.naming_contexts
                 BASE_DN = bases[0]
     return BASE_DN
+
+
+def string_combo(str1, str2, separator):
+    """
+    Return a joined string with a separator, or just one of the strings if
+    the other is empty or None.
+    """
+    if str1 is None or str1 == "":
+        return str2
+    elif str2 is None or str2 == "":
+        return str1
+    else:
+        return "%s%s%s" % (str1, separator, str2)
 
 
 def cleanup_if_gmail(email_address):
@@ -94,10 +105,7 @@ def calculate_uid(firstname, lastname):
     For a given firstname and lastname, work out a UID that doesn't already
     exist in LDAP.
     """
-    if firstname is None:
-        uid = lastname.lower()
-    else:
-        uid = firstname.lower() + "." + lastname.lower()
+    uid = string_combo(firstname, lastname, ".").lower()
 
     # Remove bad characters
     uid = unidecode(uid)
@@ -143,7 +151,12 @@ def find_best_ou_for_email(email_address):
                 search_filter="(mail=%s)" % domain,
                 search_scope=LEVEL):
             return conn.entries[0].entry_dn
-    return "ou=the-rest,ou=accounts,dc=linaro,dc=org"
+    default_ou = shared.globals.config("ldap_default_account_ou")
+    return string_combo(
+        default_ou,
+        base_dn(),
+        ","
+    )
 
 
 def get_result_cookie(result):
@@ -213,3 +226,74 @@ def create_account(first_name, family_name, email_address):
             return "uid=%s,%s" % (uid, org_unit)
     # Failed to create the account
     return None
+
+
+def parameterised_add_to_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A generalised "add to group" function that can be used for both
+    security and mailing groups by adjusting the parameters passed.
+    """
+    # Calculate the DN.
+    grp_dn = "cn=%s,%s" % (
+        group_name,
+        string_combo(
+            shared.globals.config(group_location_tag),
+            base_dn(),
+            ","
+        ))
+    with get_ldap_connection() as conn:
+        # In the group already?
+        if conn.search(
+                grp_dn,
+                search_filter="(%s=%s)" % (member_attribute, member_value),
+                search_scope=BASE):
+            return True
+
+        # No, so add them.
+        change = {
+            member_attribute: [(MODIFY_ADD, [member_value])]
+        }
+        return conn.modify(grp_dn, change)
+
+
+def add_to_security_group(group_name, add_dn):
+    """ Add the user to the specified security group. """
+    # Start by extracting the uid from the DN.
+    uid = add_dn.split("=", 1)[1].split(",", 1)[0]
+    return parameterised_add_to_group(
+        group_name,
+        "ldap_security_groups",
+        "memberUid",
+        uid
+    )
+
+
+def add_to_mailing_group(group_name, add_dn):
+    """ Add the DN to the specified mailing group. """
+    return parameterised_add_to_group(
+        group_name,
+        "ldap_mailing_groups",
+        "uniqueMember",
+        add_dn
+    )
+
+
+def add_to_group(group_name, add_dn):
+    """
+    Add the specified DN to the specified group.
+
+    Linaro's LDAP implementation uses two different types of group:
+    * posixGroup for security groups
+    * groupOfUniqueNames for mailing groups
+
+    The latter can nest other groups, so if "add_dn" starts with cn=
+    instead of uid=, that is a group and not an account, so it just
+    gets added to the mailing group.
+    """
+    if add_dn.split("=", 1)[0] == "uid":
+        add_to_security_group(group_name, add_dn)
+    add_to_mailing_group(group_name, add_dn)

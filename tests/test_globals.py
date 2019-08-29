@@ -264,3 +264,17 @@ def test_ldap_credentials(mi1):
     assert user == "ldap_user"
     assert password == "vault_password"
     assert mi1.called is True
+
+
+def test_config():
+    """ Test config function. """
+    shared.globals.CONFIGURATION = {}
+    assert shared.globals.config("foo") is None
+    shared.globals.CONFIGURATION = {
+        "bar": "wibble"
+    }
+    assert shared.globals.config("foo") is None
+    shared.globals.CONFIGURATION = {
+        "foo": "wibble"
+    }
+    assert shared.globals.config("foo") == "wibble"

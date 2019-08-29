@@ -162,3 +162,13 @@ def initialise_sd_auth():
     global SD_AUTH
     name, password = get_sd_credentials()
     SD_AUTH = HTTPBasicAuth(name, password)
+
+
+def config(key):
+    """
+    Provide a safe way of retrieving a key from the configuration.
+    """
+    if (CONFIGURATION is not None and
+            key in CONFIGURATION):
+        return CONFIGURATION[key]
+    return None

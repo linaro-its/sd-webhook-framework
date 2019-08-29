@@ -4,6 +4,7 @@
 import mock
 import pytest
 
+from ldap3 import MODIFY_ADD
 import shared.shared_ldap as shared_ldap
 import shared.globals
 
@@ -116,7 +117,7 @@ class MockLDAP3Connection: # pylint: disable=too-few-public-methods
         """ Validate what we're creating against the test values. """
         _ = object_class
         _ = controls
-        assert ldap_dn == "uid=fred.flintstone,ou=the-rest,ou=accounts,dc=linaro,dc=org"
+        assert ldap_dn == "uid=fred.flintstone,base_dn"
         assert attributes["cn"] == "fred.flintstone@widget.org"
         assert attributes["homeDirectory"] == "/home/fred.flintstone"
         assert attributes["sn"] == b"Flintstone"
@@ -124,6 +125,15 @@ class MockLDAP3Connection: # pylint: disable=too-few-public-methods
         assert attributes["givenName"] == b"Fred"
         assert attributes["uidNumber"] == "10002"
         return self.add_result
+
+    def modify(self, ldap_dn, change):
+        """
+        Mock the modify function. Return the change so that the test code can
+        validate we've been called correctly.
+        """
+        _ = self
+        _ = ldap_dn
+        return change
 
     # Required to support context manager
     def __enter__(self):
@@ -144,6 +154,15 @@ def test_base_dn():
     shared_ldap.CONNECTION = MockLDAP3Connection()
     shared.globals.CONFIGURATION = {}
     assert shared_ldap.base_dn() == "naming_context_1"
+
+
+def test_string_combo():
+    """ Test string_combo. """
+    assert shared_ldap.string_combo("string1", None, ".") == "string1"
+    assert shared_ldap.string_combo("string1", "", ".") == "string1"
+    assert shared_ldap.string_combo(None, "string2", ".") == "string2"
+    assert shared_ldap.string_combo("", "string2", ".") == "string2"
+    assert shared_ldap.string_combo("string1", "string2", ".") == "string1.string2"
 
 
 def test_search_filter():
@@ -202,8 +221,9 @@ def test_find_best_ou():
     shared_ldap.CONNECTION = MockLDAP3Connection()
     shared_ldap.CONNECTION.fake_search_result = False
     shared_ldap.CONNECTION.flip_search_result = False
+    shared.globals.CONFIGURATION = {}
     assert shared_ldap.find_best_ou_for_email("fred@flintstone") == \
-        "ou=the-rest,ou=accounts,dc=linaro,dc=org"
+        "base_dn"
     shared_ldap.CONNECTION.fake_search_result = True
     assert shared_ldap.find_best_ou_for_email("fred@flintstone") == \
         "entry_dn_1"
@@ -287,11 +307,98 @@ def test_create_account(mi1, mi2):
     global COOKIE_COUNT  # pylint: disable=global-statement
     COOKIE_COUNT = 0
     # Intially, we want a successful result ...
+    shared.globals.CONFIGURATION = {}
     shared_ldap.CONNECTION.add_result = True
     shared_ldap.create_account("Fred", "Flintstone", "fred.flintstone@widget.org")
     # Fake a failure to create the account to ensure that all of the
     # create_account code is tested.
     shared_ldap.CONNECTION.add_result = False
     shared_ldap.create_account("Fred", "Flintstone", "fred.flintstone@widget.org")
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+def test_parameterised_add_to_group():
+    """ Test parameterised_add_to_group. """
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.CONNECTION.fake_search_result = True
+    assert shared_ldap.parameterised_add_to_group(
+        "fake-group",
+        "ldap_security_groups",
+        "memberUid",
+        "fred.flintstone") is True
+    shared_ldap.CONNECTION.fake_search_result = False
+    expected_results = {
+        "memberUid": [(MODIFY_ADD, ["fred.flintstone"])]
+    }
+    assert shared_ldap.parameterised_add_to_group(
+        "fake-group",
+        "ldap_security_groups",
+        "memberUid",
+        "fred.flintstone") == expected_results
+
+
+def mock_parameterised_add_to_group_sec_test(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    assert group_name == "mock_test_group_name"
+    assert group_location_tag == "ldap_security_groups"
+    assert member_attribute == "memberUid"
+    assert member_value == "fred.flintstone"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    side_effect=mock_parameterised_add_to_group_sec_test,
+    autospec=True
+)
+def test_add_to_security_group(mi1):
+    """ Test add_to_security_group. """
+    shared_ldap.add_to_security_group(
+        "mock_test_group_name",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+def mock_parameterised_add_to_group_mail_test(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    assert group_name == "mock_test_group_name"
+    assert group_location_tag == "ldap_mailing_groups"
+    assert member_attribute == "uniqueMember"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    side_effect=mock_parameterised_add_to_group_mail_test,
+    autospec=True
+)
+def test_add_to_mailing_group(mi1):
+    """ Test add_to_mailing_group. """
+    shared_ldap.add_to_mailing_group(
+        "mock_test_group_name",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.add_to_security_group",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.add_to_mailing_group",
+    autospec=True
+)
+def test_add_to_group(mi1, mi2):
+    """ Test add_to_group. """
+    shared_ldap.add_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
     assert mi1.called is True
     assert mi2.called is True

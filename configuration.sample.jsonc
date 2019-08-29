@@ -43,6 +43,18 @@
     // if you want the code to automatically determine the base DN.
     "ldap_base_dn": "",
     //
+    // Set this to be the default OU in which to place new accounts.
+    // The base DN will be appended.
+    "ldap_default_account_ou": "ou=accounts",
+    //
+    // Set this to be the OU for security groups. The base DN will
+    // be appended.
+    "ldap_security_groups": "ou=security",
+    //
+    // Set this to be the OU for mailing groups. The base DN will be
+    // appended.
+    "ldap_mailing_groups": "ou=mailing",
+    //
     // Set this to be a user on LDAP with sufficient privileges.
     "ldap_user": "valid-ldap-DN",
     //
