@@ -70,7 +70,7 @@ def save_text_as_attachment(filename, content, comment, public):
                 json.dumps(create))
             if result.status_code == 404:
                 print(
-                    "It doesn't look like %s has permission to add attachments to %s"
+                    "WARNING! It doesn't look like %s has permission to add attachments to %s"
                     % (shared.globals.CONFIGURATION["bot_name"], shared.globals.PROJECT)
                 )
         # Return the status code either from creating the attachment or
