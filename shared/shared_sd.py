@@ -124,17 +124,17 @@ def automation_triggered_comment(ticket_data):
 
 def trigger_is_assignment(ticket_data):
     """ Did a change of assignee trigger this event? """
-    return look_for_trigger("assignee", ticket_data)
+    return look_for_trigger("assignee", ticket_data, "from", "to")
 
 
 def trigger_is_transition(ticket_data):
     """ Did a transition trigger this event? """
-    return look_for_trigger("status", ticket_data)
+    return look_for_trigger("status", ticket_data, "fromString", "toString")
 
 
 # Jira will trigger the jira:issue_updated webhook for any change to an issue,
 # including comments.
-def look_for_trigger(trigger_type, ticket_data):
+def look_for_trigger(trigger_type, ticket_data, from_tag, to_tag):
     """ Try to find the specified trigger type in the ticket data. """
     # Make sure that we've got ticket data for an assignment or a transition.
     if usable_ticket_data(ticket_data):
@@ -149,7 +149,7 @@ def look_for_trigger(trigger_type, ticket_data):
                 "Failed to find changelog items")
         for item in ticket_data["changelog"]["items"]:
             if item["field"] == trigger_type and item["fieldtype"] == "jira":
-                return True, item["from"], item["to"]
+                return True, item[from_tag], item[to_tag]
     return False, None, None
 
 
