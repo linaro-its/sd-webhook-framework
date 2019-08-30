@@ -35,6 +35,7 @@ def create():
         try:
             if handler.SAVE_TICKET_DATA:
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            print("Calling create handler for %s" % shared.globals.TICKET)
             handler.create(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -54,6 +55,7 @@ def comment():
         try:
             if handler.SAVE_TICKET_DATA:
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            print("Calling comment handler for %s" % shared.globals.TICKET)
             handler.comment(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -82,8 +84,10 @@ def jira_hook():
                      ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
             if "TRANSITION" in handler.CAPABILITIES and status_result:
+                print("Calling transition handler for %s" % shared.globals.TICKET)
                 handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
             if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
+                print("Calling assignment handler for %s" % shared.globals.TICKET)
                 handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
