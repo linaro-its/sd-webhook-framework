@@ -68,6 +68,11 @@ def save_text_as_attachment(filename, content, comment, public):
                 "%s/rest/servicedeskapi/request/%s/attachment" % (
                     shared.globals.ROOT_URL, shared.globals.TICKET),
                 json.dumps(create))
+            if result.status_code == 404:
+                print(
+                    "It doesn't look like %s has permission to add attachments to %s"
+                    % (shared.globals.CONFIGURATION["bot_name"], shared.globals.PROJECT)
+                )
         # Return the status code either from creating the attachment or
         # attaching the temporary file.
         return result.status_code
