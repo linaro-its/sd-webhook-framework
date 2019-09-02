@@ -209,10 +209,26 @@ def post_comment(comment, public_switch):
         print("Comment: %s" % comment)
 
 
+def remove_user(username):
+    """ Remove the specified user from Jira. """
+    result = service_desk_request_delete(
+        "%s/rest/api/2/user?username=%s" % (
+            shared.globals.ROOT_URL, username))
+    if result.status_code != 204:
+        print("Got status code %s in remove_user" % result.status_code)
+        print(result.text)
+
+
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
     return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
+
+
+def service_desk_request_delete(url):
+    """Centralised routine to DELETE from Service Desk."""
+    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
+    return requests.delete(url, headers=headers, auth=shared.globals.SD_AUTH)
 
 
 def service_desk_request_post(url, data):
