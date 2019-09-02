@@ -27,7 +27,7 @@ code can support the desired action, e.g.:
 
     CAPABILITIES = [ "CREATE", "ASSIGNMENT" ]
 
-The sample test handler `rt206.py` lists all of the supported transition names.
+The sample test handler `rt_example_handler.py` lists all of the supported transition names. Handlers used by Linaro can be found in https://github.com/linaro-its/sd-webhook-handlers.
 
 ## Installation
 
