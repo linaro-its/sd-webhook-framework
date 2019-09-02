@@ -24,6 +24,71 @@ def test_hello_world():
 
 
 @mock.patch(
+    'app.shared_sd.ticket_request_type',
+    return_value="_example_handler",
+    autospec=True
+)
+def test_initialise_handler(mi1):
+    """ Test initialise_handler. """
+    # Note that the repo only ships with an example handler ...
+    test_result = app.initialise_handler()
+    assert test_result is not None
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.shared_sd.post_comment',
+    autospec=True
+)
+def test_initialise_handler_bad_config(mi1):
+    """ Test initialise_handler. """
+    shared.globals.CONFIGURATION = {
+        "cf_cachefile": "non_existent_file",
+        "cf_use_plugin_api": False,
+        "cf_use_cloud_api": False
+    }
+    shared.globals.TICKET_DATA = {}
+    test_result = app.initialise_handler()
+    assert test_result is None
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.shared_sd.ticket_request_type',
+    return_value=None,
+    autospec=True
+)
+def test_initialise_handler_missing_handler(mi1):
+    """ Test initialise_handler. """
+    test_result = app.initialise_handler()
+    assert test_result is None
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.shared_sd.ticket_request_type',
+    return_value="-1",
+    autospec=True
+)
+def test_initialise_missing_path(mi1):
+    """ Test the code that adds the path to the handlers. """
+    # Build the path to rt_handlers. Note that we need to go two levels
+    # up ...
+    dir_path = os.path.dirname(
+        os.path.dirname(
+            os.path.abspath(__file__)
+        )) + "/rt_handlers"
+    # pytest will have loaded at least one RT test, causing that path
+    # to be added to sys.path, so we have to remove it to ensure full
+    # coverage of app.initialise.
+    if dir_path in sys.path:
+        sys.path.remove(dir_path)
+    test_result = app.initialise_handler()
+    assert mi1.called is True
+    assert test_result is None
+
+
+@mock.patch(
     'app.shared.globals.initialise_config',
     autospec=True
 )
@@ -40,122 +105,23 @@ def test_hello_world():
     autospec=True
 )
 @mock.patch(
-    'app.shared_sd.ticket_request_type',
-    return_value="206",
+    'app.initialise_handler',
+    return_value="mock_handler",
     autospec=True
 )
-def test_initialise(mock_rt, mi1, mi2, mi3, mi4):
-    """ Test the app initialisation. """
+def test_intialise(mi1, mi2, mi3, mi4, mi5):
+    """ Test initialise. """
     # The app code includes a variable called APP, so reference that
     # as flask_app to make the code clearer.
     flask_app = app.APP
     with flask_app.test_request_context('/'):
         test_result = app.initialise()
-        assert mock_rt.called is True
-        assert mi1.called is True
-        assert mi2.called is True
-        assert mi3.called is True
-        assert mi4.called is True
-        assert test_result is not None
-
-
-@mock.patch(
-    'app.shared.globals.initialise_config',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_ticket_data',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_shared_sd',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_sd_auth',
-    autospec=True
-)
-@mock.patch(
-    'app.shared_sd.ticket_request_type',
-    return_value="-1",
-    autospec=True
-)
-def test_initialise_missing_handler(mock_rt, mi1, mi2, mi3, mi4):
-    """ Test handling of a handler that needs to be loaded. """
-    # The app code includes a variable called app, so reference that
-    # as flask_app to make the code clearer.
-    flask_app = app.APP
-    with flask_app.test_request_context('/'):
-        test_result = app.initialise()
-        assert mock_rt.called is True
-        assert mi1.called is True
-        assert mi2.called is True
-        assert mi3.called is True
-        assert mi4.called is True
-        assert test_result is None
-
-
-@mock.patch(
-    'app.shared.shared_sd.ticket_request_type',
-    side_effect=shared.shared_sd.CustomFieldLookupFailure(),
-    autospec=True
-)
-@mock.patch(
-    'app.shared.shared_sd.post_comment',
-    autospec=True
-)
-def test_initialise_handler_exception(mi1, mi2):
-    """ Test handling of custom field lookup error. """
-    handler = app.initialise_handler()
+    assert test_result == "mock_handler"
     assert mi1.called is True
     assert mi2.called is True
-    assert handler is None
-
-
-@mock.patch(
-    'app.shared.globals.initialise_config',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_ticket_data',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_shared_sd',
-    autospec=True
-)
-@mock.patch(
-    'app.shared.globals.initialise_sd_auth',
-    autospec=True
-)
-@mock.patch(
-    'app.shared_sd.ticket_request_type',
-    return_value="-1",
-    autospec=True
-)
-def test_initialise_missing_path(mock_rt, mi1, mi2, mi3, mi4):
-    """ Test the code that adds the path to the handlers. """
-    # The app code includes a variable called app, so reference that
-    # as flask_app to make the code clearer.
-    flask_app = app.APP
-    with flask_app.test_request_context('/'):
-        # Build the path to rt_handlers. Note that we need to go two levels
-        # up ...
-        dir_path = os.path.dirname(
-            os.path.dirname(
-                os.path.abspath(__file__)
-            )) + "/rt_handlers"
-        # pytest will have loaded at least one RT test, causing that path
-        # to be added to sys.path, so we have to remove it to ensure full
-        # coverage of app.initialise.
-        sys.path.remove(dir_path)
-        test_result = app.initialise()
-        assert mock_rt.called is True
-        assert mi1.called is True
-        assert mi2.called is True
-        assert mi3.called is True
-        assert mi4.called is True
-        assert test_result is None
+    assert mi3.called is True
+    assert mi4.called is True
+    assert mi5.called is True
 
 
 # Need to have some mock handlers for testing the rest of the app code.
