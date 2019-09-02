@@ -5,7 +5,6 @@ import os
 import sys
 from unittest.mock import patch
 import mock
-import pytest
 
 # Tell Python where to find the webhook automation code otherwise
 # the test code isn't able to import it.
