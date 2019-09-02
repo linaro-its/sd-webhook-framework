@@ -2,7 +2,7 @@
 .coverage
 .vscode
 .pytest_cache/
-configuration.jsonc
 __pycache__
 *.pyc
-rt_handlers/rt265_email.txt
+configuration.jsonc
+rt_handlers/
