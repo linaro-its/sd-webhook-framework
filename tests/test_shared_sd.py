@@ -266,6 +266,55 @@ def test_save_as_attachment_good_status(mock_get_servicedesk_id):
 
 
 @mock.patch(
+    'shared.shared_sd.get_servicedesk_id',
+    return_value=3,
+    autospec=True
+)
+@responses.activate
+def test_save_as_attachment_good_and_bad_status(mock_get_servicedesk_id):
+    """ Test handling of saving attachment. """
+    shared.globals.SD_AUTH = HTTPBasicAuth("name", "password")
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "ITS-1"
+    shared.globals.PROJECT = "MOCK"
+    shared.globals.CONFIGURATION = {
+        'bot_name': 'mockbot'
+    }
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/servicedeskapi/servicedesk/3"
+        "/attachTemporaryFile",
+        json={
+            "temporaryAttachments": [
+                {
+                    "temporaryAttachmentId": 42
+                }
+            ]
+        },
+        status=201
+    )
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/servicedeskapi/request/ITS-1/attachment",
+        status=404
+    )
+    result = shared_sd.save_text_as_attachment(
+        "filename",
+        "content",
+        "comment",
+        False
+    )
+    assert mock_get_servicedesk_id.called is True
+    assert len(responses.calls) == 2
+    assert responses.calls[0].request.url == (
+        "https://mock-server/rest/servicedeskapi/servicedesk/3"
+        "/attachTemporaryFile")
+    assert responses.calls[1].request.url == (
+        "https://mock-server/rest/servicedeskapi/request/ITS-1/attachment")
+    assert result == 404
+
+
+@mock.patch(
     'shared.custom_fields.get',
     return_value=None
 )
@@ -388,15 +437,17 @@ def test_trigger_is_transition():
                     "field": "status",
                     "fieldtype": "jira",
                     "from": "from",
-                    "to": "to"
+                    "fromString": "fromString",
+                    "to": "to",
+                    "toString": "toString"
                 }
             ]
         }
     }
     match, t_from, t_to = shared_sd.trigger_is_transition(data)
     assert match is True
-    assert t_from == "from"
-    assert t_to == "to"
+    assert t_from == "fromString"
+    assert t_to == "toString"
 
 
 def test_look_for_trigger():
@@ -406,14 +457,14 @@ def test_look_for_trigger():
         "issue_event_type_name": "issue_generic"
     }
     with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.look_for_trigger(None, data)
+        shared_sd.look_for_trigger(None, data, None, None)
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
         "changelog": {}
     }
     with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.look_for_trigger(None, data)
+        shared_sd.look_for_trigger(None, data, None, None)
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
@@ -423,16 +474,18 @@ def test_look_for_trigger():
                     "field": "test",
                     "fieldtype": "jira",
                     "from": "from",
-                    "to": "to"
+                    "fromString": "fromString",
+                    "to": "to",
+                    "toString": "toString"
                 }
             ]
         }
     }
-    match, t_from, t_to = shared_sd.look_for_trigger("test", data)
+    match, t_from, t_to = shared_sd.look_for_trigger("test", data, "from", "to")
     assert match is True
     assert t_from == "from"
     assert t_to == "to"
-    match, t_from, t_to = shared_sd.look_for_trigger("fail", data)
+    match, t_from, t_to = shared_sd.look_for_trigger("fail", data, None, None)
     assert match is False
     assert t_from is None
     assert t_to is None
