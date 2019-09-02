@@ -42,6 +42,19 @@ def get_servicedesk_id(sd_project_key):
     return -1
 
 
+def get_request_type_id(name, sdid):
+    """ Return the ID for the specified request type in the specified project. """
+    result = service_desk_request_get(
+        "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
+            shared.globals.ROOT_URL, sdid))
+    if result.status_code == 200:
+        json_content = json.loads(result.text)
+        for value in json_content["values"]:
+            if value["name"] == name:
+                return value["id"]
+    return -1
+
+
 def save_text_as_attachment(filename, content, comment, public):
     """Save the specified text as a file on the current ticket."""
     headers = {'X-Atlassian-Token': 'no-check', 'X-ExperimentalApi': 'true'}
@@ -76,7 +89,7 @@ def save_text_as_attachment(filename, content, comment, public):
         # Return the status code either from creating the attachment or
         # attaching the temporary file.
         return result.status_code
-    # Indicate we couldn't find the ITS project ... which shouldn't happen!
+    # Indicate we couldn't find the project for this ticket ... which shouldn't happen!
     return -1
 
 
@@ -216,6 +229,16 @@ def remove_user(username):
             shared.globals.ROOT_URL, username))
     if result.status_code != 204:
         print("Got status code %s in remove_user" % result.status_code)
+        print(result.text)
+
+
+def create_request(request_data):
+    """ Create a Service Desk request from the provided data. """
+    result = service_desk_request_post(
+        "%s/rest/servicedeskapi/request" % shared.globals.ROOT_URL,
+        json.dumps(request_data))
+    if result.status_code != 201:
+        print("Got status code %s in create_request" % result.status_code)
         print(result.text)
 
 
