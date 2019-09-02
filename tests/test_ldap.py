@@ -344,6 +344,10 @@ def mock_parameterised_add_to_group_sec_test(
         group_location_tag,
         member_attribute,
         member_value):
+    """
+    A mock parameterised_add_to_group to test
+    adding to a security group.
+    """
     assert group_name == "mock_test_group_name"
     assert group_location_tag == "ldap_security_groups"
     assert member_attribute == "memberUid"
@@ -369,6 +373,10 @@ def mock_parameterised_add_to_group_mail_test(
         group_location_tag,
         member_attribute,
         member_value):
+    """
+    A mock parameterised_add_to_group to test
+    adding to a mailing group.
+    """
     assert group_name == "mock_test_group_name"
     assert group_location_tag == "ldap_mailing_groups"
     assert member_attribute == "uniqueMember"
