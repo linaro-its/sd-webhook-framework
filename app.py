@@ -12,6 +12,7 @@ flask run --host=0.0.0.0
 import os
 import sys
 import importlib
+import traceback
 
 from flask import Flask, request
 import shared.globals
@@ -39,7 +40,7 @@ def create():
             handler.create(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
                 False
             )
     return ""
@@ -59,7 +60,7 @@ def comment():
             handler.comment(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
                 False
             )
     return ""
@@ -91,7 +92,7 @@ def jira_hook():
                 handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation: %s" % str(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
                 False
             )
     return ""
