@@ -78,6 +78,82 @@ def test_initialise_shared_sd():
     assert shared.globals.PROJECT == "ITS"
 
 
+def test_validate_cf_config():
+    """ Test validate_cf_config """
+    shared.globals.CONFIGURATION = {
+        "cf_use_plugin_api": True
+    }
+    with pytest.raises(shared.globals.MissingCFConfig):
+        shared.globals.validate_cf_config()
+    shared.globals.CONFIGURATION = {
+        "cf_use_plugin_api": True,
+        "cf_use_cloud_api": False
+    }
+    # This should pass the validation because we now default the
+    # cachefile name if it is missing from the config.
+    shared.globals.validate_cf_config()
+
+
+def test_validate_user_password_config():
+    """ Test various user/password combos. """
+    shared.globals.CONFIGURATION = {}
+    with pytest.raises(shared.globals.MissingCredentials):
+        shared.globals.validate_user_password_config(
+            "bot_name", "bot_password", "vault_bot_name")
+    # If we're missing the password tag, we must have the three
+    # Vault tags.
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "vault_bot_name": "Fred"
+    }
+    with pytest.raises(shared.globals.MissingCredentials):
+        shared.globals.validate_user_password_config(
+            "bot_name", "bot_password", "vault_bot_name")
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "vault_bot_name": "Fred",
+        "vault_iam_role": "foo"
+    }
+    with pytest.raises(shared.globals.MissingCredentials):
+        shared.globals.validate_user_password_config(
+            "bot_name", "bot_password", "vault_bot_name")
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "vault_bot_name": "Fred",
+        "vault_server_url": "foo"
+    }
+    with pytest.raises(shared.globals.MissingCredentials):
+        shared.globals.validate_user_password_config(
+            "bot_name", "bot_password", "vault_bot_name")
+    # Test for everything present and correct.
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "vault_bot_name": "Fred",
+        "vault_iam_role": "foo",
+        "vault_server_url": "foo"
+    }
+    shared.globals.validate_user_password_config(
+        "bot_name", "bot_password", "vault_bot_name")
+    # Now test for overlapping errors.
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "bot_password": "Fred",
+        "vault_bot_name": "Fred"
+    }
+    with pytest.raises(shared.globals.OverlappingCredentials):
+        shared.globals.validate_user_password_config(
+            "bot_name", "bot_password", "vault_bot_name")
+    # But not if the other Vault entries are there.
+    shared.globals.CONFIGURATION = {
+        "bot_name": "Fred",
+        "bot_password": "Fred",
+        "vault_iam_role": "foo",
+        "vault_server_url": "foo"
+    }
+    shared.globals.validate_user_password_config(
+        "bot_name", "bot_password", "vault_bot_name")
+
+
 def test_initialise_config():
     """ Test initialise_config """
     # Check that we get a JSON error on an empty file.
@@ -92,111 +168,23 @@ def test_initialise_config():
     )):
         with pytest.raises(shared.globals.MissingCFConfig):
             shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCFConfig):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCFConfig):
-            shared.globals.initialise_config()
+    # Test a valid config as we've checked everything else already.
     data = {
         "cf_use_plugin_api": True,
         "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile"
-    }
-    # All of the CF parts are there so now we're testing the bot parts.
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
-        "bot_name": "Fred"
-    }
-    # We don't have bot_password there so we should get the missing
-    # vault errors now.
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
-        "bot_name": "Fred",
-        "vault_bot_name": "Fred"
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
         "bot_name": "Fred",
         "vault_bot_name": "Fred",
-        "vault_iam_role": "iam"
+        "vault_iam_role": "foo",
+        "vault_server_url": "foo",
+        "ldap_enabled": "True",
+        "ldap_server": "wibble",
+        "ldap_user": "Bob",
+        "ldap_password": "foo"
     }
     with patch("builtins.open", mock_open(
             read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.MissingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
-        "bot_name": "Fred",
-        "bot_password": "password",
-        "vault_bot_name": "bot"
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.OverlappingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
-        "bot_name": "Fred",
-        "bot_password": "password",
-        "vault_iam_role": "iam"
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.OverlappingCredentials):
-            shared.globals.initialise_config()
-    data = {
-        "cf_use_plugin_api": True,
-        "cf_use_cloud_api": False,
-        "cf_cachefile": "/tmp/cachefile",
-        "bot_name": "Fred",
-        "bot_password": "password",
-        "vault_server_url": "url"
-    }
-    with patch("builtins.open", mock_open(
-            read_data=json.dumps(data)
-    )):
-        with pytest.raises(shared.globals.OverlappingCredentials):
-            shared.globals.initialise_config()
+        )):
+        shared.globals.initialise_config()
 
 
 def test_simple_credentials():
@@ -246,3 +234,47 @@ def test_get_sd_auth(mock_sd_auth_credentials):
     compare = HTTPBasicAuth("name", "password")
     assert shared.globals.SD_AUTH == compare
     assert mock_sd_auth_credentials.called is True
+
+
+@mock.patch(
+    'shared.globals.vault_auth.get_secret',
+    return_value={
+        "data": {
+            "pw": "vault_password"
+        }
+    },
+    autospec=True
+)
+def test_ldap_credentials(mi1):
+    """ Test get_ldap_credentials. """
+    shared.globals.CONFIGURATION = {
+        "ldap_user": "user",
+        "ldap_password": "password"
+    }
+    user, password = shared.globals.get_ldap_credentials()
+    assert user == "user"
+    assert password == "password"
+    shared.globals.CONFIGURATION = {
+        "ldap_user": "ldap_user",
+        "vault_ldap_name": "vault_ldap_name",
+        "vault_iam_role": "role",
+        "vault_server_url": "url"
+    }
+    user, password = shared.globals.get_ldap_credentials()
+    assert user == "ldap_user"
+    assert password == "vault_password"
+    assert mi1.called is True
+
+
+def test_config():
+    """ Test config function. """
+    shared.globals.CONFIGURATION = {}
+    assert shared.globals.config("foo") is None
+    shared.globals.CONFIGURATION = {
+        "bar": "wibble"
+    }
+    assert shared.globals.config("foo") is None
+    shared.globals.CONFIGURATION = {
+        "foo": "wibble"
+    }
+    assert shared.globals.config("foo") == "wibble"

@@ -35,6 +35,7 @@ def create():
         try:
             if handler.SAVE_TICKET_DATA:
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            print("Calling create handler for %s" % shared.globals.TICKET, file=sys.stderr)
             handler.create(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -54,6 +55,7 @@ def comment():
         try:
             if handler.SAVE_TICKET_DATA:
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            print("Calling comment handler for %s" % shared.globals.TICKET, file=sys.stderr)
             handler.comment(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -82,8 +84,10 @@ def jira_hook():
                      ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
                 shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
             if "TRANSITION" in handler.CAPABILITIES and status_result:
+                print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
             if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
+                print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -93,20 +97,34 @@ def jira_hook():
     return ""
 
 
+def initialise_handler():
+    """ Load the Python code handling this request type if possible. """
+    try:
+        # Get the request type for this data
+        reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
+    except shared_sd.CustomFieldLookupFailure as caught_error:
+        shared_sd.post_comment(
+            "%s. Please check the configuration and logs." % str(caught_error),
+            False
+        )
+        reqtype = None
+    if reqtype is not None:
+        # See if there is a module for this request type. If there is,
+        # import it.
+        dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
+        if os.path.isdir(dir_path):
+            if dir_path not in sys.path:
+                sys.path.insert(0, dir_path)
+            if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
+                return importlib.import_module(reqtype)
+            print("Called to handle %s but no handler found." % reqtype, file=sys.stderr)
+    return None
+
+
 def initialise():
     """ Initialise code and variables for this event. """
     shared.globals.initialise_config()
     shared.globals.initialise_ticket_data(request.data)
     shared.globals.initialise_shared_sd()
     shared.globals.initialise_sd_auth()
-    # Get the request type for this data
-    reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
-    # See if there is a module for this request type. If there is,
-    # import it.
-    dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
-    if os.path.isdir(dir_path):
-        if dir_path not in sys.path:
-            sys.path.insert(0, dir_path)
-        if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
-            return importlib.import_module(reqtype)
-    return None
+    return initialise_handler()

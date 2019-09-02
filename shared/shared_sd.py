@@ -68,6 +68,11 @@ def save_text_as_attachment(filename, content, comment, public):
                 "%s/rest/servicedeskapi/request/%s/attachment" % (
                     shared.globals.ROOT_URL, shared.globals.TICKET),
                 json.dumps(create))
+            if result.status_code == 404:
+                print(
+                    "WARNING! It doesn't look like %s has permission to add attachments to %s"
+                    % (shared.globals.CONFIGURATION["bot_name"], shared.globals.PROJECT)
+                )
         # Return the status code either from creating the attachment or
         # attaching the temporary file.
         return result.status_code
@@ -119,17 +124,17 @@ def automation_triggered_comment(ticket_data):
 
 def trigger_is_assignment(ticket_data):
     """ Did a change of assignee trigger this event? """
-    return look_for_trigger("assignee", ticket_data)
+    return look_for_trigger("assignee", ticket_data, "from", "to")
 
 
 def trigger_is_transition(ticket_data):
     """ Did a transition trigger this event? """
-    return look_for_trigger("status", ticket_data)
+    return look_for_trigger("status", ticket_data, "fromString", "toString")
 
 
 # Jira will trigger the jira:issue_updated webhook for any change to an issue,
 # including comments.
-def look_for_trigger(trigger_type, ticket_data):
+def look_for_trigger(trigger_type, ticket_data, from_tag, to_tag):
     """ Try to find the specified trigger type in the ticket data. """
     # Make sure that we've got ticket data for an assignment or a transition.
     if usable_ticket_data(ticket_data):
@@ -144,7 +149,7 @@ def look_for_trigger(trigger_type, ticket_data):
                 "Failed to find changelog items")
         for item in ticket_data["changelog"]["items"]:
             if item["field"] == trigger_type and item["fieldtype"] == "jira":
-                return True, item["from"], item["to"]
+                return True, item[from_tag], item[to_tag]
     return False, None, None
 
 
@@ -157,10 +162,30 @@ def usable_ticket_data(ticket_data):
     if "issue_event_type_name" not in ticket_data:
         return False
     ietn = ticket_data["issue_event_type_name"]
-    if ietn != "issue_assigned" and ietn != "issue_generic":
+    if ietn not in ("issue_assigned", "issue_generic"):
         return False
     # It should be valid from hereon in
     return True
+
+
+def get_field(ticket_data, field_id):
+    """ Return the required custom field if it is in the data. """
+    field_name = "customfield_%s" % field_id
+    if ("issue" in ticket_data and
+            "fields" in ticket_data["issue"] and
+            field_name in ticket_data["issue"]["fields"]):
+        return ticket_data["issue"]["fields"][field_name]
+    return None
+
+
+def reporter_email_address(ticket_data):
+    """ Get the reporter's email address from the ticket data. """
+    if ("issue" in ticket_data and
+            "fields" in ticket_data["issue"] and
+            "reporter" in ticket_data["issue"]["fields"] and
+            "emailAddress" in ticket_data["issue"]["fields"]["reporter"]):
+        return ticket_data["issue"]["fields"]["reporter"]["emailAddress"]
+    return None
 
 
 def post_comment(comment, public_switch):
@@ -173,13 +198,15 @@ def post_comment(comment, public_switch):
     # much!
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/comment" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET_DATA),
+            shared.globals.ROOT_URL, shared.globals.TICKET),
         json_comment
     )
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
         print("Got status code %s in post_comment" % result.status_code)
-        print(comment)
+        print("Url: %s/rest/servicedeskapi/request/%s/comment" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET))
+        print("Comment: %s" % comment)
 
 
 def service_desk_request_get(url):

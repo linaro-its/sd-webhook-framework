@@ -2,6 +2,7 @@
 .coverage
 .vscode
 .pytest_cache/
-configuration.jsonc
 __pycache__
 *.pyc
+configuration.jsonc
+rt_handlers/

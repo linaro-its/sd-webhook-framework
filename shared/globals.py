@@ -67,7 +67,9 @@ def validate_cf_config():
     if "cf_use_cloud_api" not in CONFIGURATION:
         raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
     if "cf_cachefile" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_cachefile' in config")
+        # Default to using the cache file in the repo.
+        basedir = os.path.dirname(os.path.dirname(__file__))
+        CONFIGURATION["cf_cachefile"] = "%s/cf_cachefile" % basedir
 
 
 def validate_vault_tag(tag, required):
@@ -75,32 +77,42 @@ def validate_vault_tag(tag, required):
     if tag in CONFIGURATION:
         if not required:
             raise OverlappingCredentials(
-                "Can't have 'bot_password' and '%s'" % tag)
+                "Can't have '%s' when a password has been specified "
+                "in the configuration file" % tag
+            )
     else:
         if required:
             raise MissingCredentials(
                 "Missing '%s' in configuration file" % tag)
 
 
-def validate_vault_config(required):
+def validate_vault_config(vault_user_tag, required):
     """ Check the various vault config combinations. """
-    validate_vault_tag("vault_bot_name", required)
+    validate_vault_tag(vault_user_tag, required)
     validate_vault_tag("vault_iam_role", required)
     validate_vault_tag("vault_server_url", required)
 
 
-def validate_auth_config():
-    """ Raise exceptions if the configuration has problems. """
-    if "bot_name" not in CONFIGURATION:
+def validate_user_password_config(user_tag, password_tag, vault_user_tag):
+    """ Check the user/password configuration is valid. """
+    if user_tag not in CONFIGURATION:
         raise MissingCredentials(
-            "Missing 'bot_name' in configuration file")
-    if "bot_password" not in CONFIGURATION:
-        # Make sure that the Vault values are there
-        validate_vault_config(True)
+            "Missing '%s' in configuration file" % user_tag)
+    if password_tag not in CONFIGURATION:
+        # Make sure that all of the Vault values are there
+        validate_vault_config(vault_user_tag, True)
     else:
         # We're using a password to authenticate with. Just as a sanity check,
-        # make sure that the Vault values are NOT there.
-        validate_vault_config(False)
+        # make sure that the Vault user tag is not there. We don't care about
+        # the IAM role or server URL because they could be needed by LDAP.
+        validate_vault_tag(vault_user_tag, False)
+
+
+def validate_auth_config():
+    """ Raise exceptions if the configuration has problems. """
+    validate_user_password_config("bot_name", "bot_password", "vault_bot_name")
+    if "ldap_enabled" in CONFIGURATION and CONFIGURATION["ldap_enabled"]:
+        validate_user_password_config("ldap_user", "ldap_password", "vault_ldap_name")
 
 
 def initialise_config():
@@ -113,6 +125,21 @@ def initialise_config():
         CONFIGURATION = json.loads(json_minify(handle.read()))
     validate_cf_config()
     validate_auth_config()
+
+
+def get_ldap_credentials():
+    """ Retrieve the credentials required by the LDAP code """
+    global CONFIGURATION
+    if "ldap_password" not in CONFIGURATION:
+        secret = vault_auth.get_secret(
+            CONFIGURATION["vault_ldap_name"],
+            iam_role=CONFIGURATION["vault_iam_role"],
+            url=CONFIGURATION["vault_server_url"]
+        )
+        # This assumes that the password will be stored in the "pw" key.
+        return CONFIGURATION["ldap_user"], secret["data"]["pw"]
+    return CONFIGURATION["ldap_user"],\
+        CONFIGURATION["ldap_password"]
 
 
 def get_sd_credentials():
@@ -129,8 +156,19 @@ def get_sd_credentials():
     return CONFIGURATION["bot_name"],\
         CONFIGURATION["bot_password"]
 
+
 def initialise_sd_auth():
     """ Initialise the SD_AUTH global. """
     global SD_AUTH
     name, password = get_sd_credentials()
     SD_AUTH = HTTPBasicAuth(name, password)
+
+
+def config(key):
+    """
+    Provide a safe way of retrieving a key from the configuration.
+    """
+    if (CONFIGURATION is not None and
+            key in CONFIGURATION):
+        return CONFIGURATION[key]
+    return None
