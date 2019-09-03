@@ -222,19 +222,6 @@ def post_comment(comment, public_switch):
         print("Comment: %s" % comment)
 
 
-def deactivate_user(username):
-    """ Deactivate the specified user. """
-    data = {
-        "active": False
-    }
-    result = service_desk_request_put(
-        "%s/rest/api/2/user?username=%s" %
-        (shared.globals.ROOT_URL, username), json.dumps(data))
-    if result.status_code != 200:
-        print("Got status code %s in deactivate_user" % result.status_code)
-        print(result.text)
-
-
 def create_request(request_data):
     """ Create a Service Desk request from the provided data. """
     result = service_desk_request_post(
@@ -245,16 +232,89 @@ def create_request(request_data):
         print(result.text)
 
 
+def resolve_ticket(resolution_state="Done", assign_to_bot=True):
+    """Mark the issue as resolved."""
+    if assign_to_bot:
+        assign_issue_to(shared.globals.CONFIGURATION["bot_name"])
+
+    transition_id = find_transition("Resolved")
+    if transition_id != 0:
+        update = {
+            'transition': {
+                'id': transition_id
+            },
+            'fields': {
+                'resolution': {
+                    'name': resolution_state
+                }
+            }
+        }
+        result = service_desk_request_post(
+            "%s/rest/api/2/issue/%s/transitions" %
+            (shared.globals.ROOT_URL, shared.globals.TICKET),
+            json.dumps(update))
+        if result.status_code != 204:
+            post_comment(
+                "Unable to mark issue as Done. Error code %s and message '%s'"
+                % (result.status_code, result.text), False)
+            post_comment(
+                "Transition ID was %s and resolution name was %s" % (
+                    transition_id, resolution_state), False)
+
+
+def assign_issue_to(person):
+    """Assign the issue to the specified email address."""
+    update = {'name': person}
+    result = service_desk_request_put(
+        "%s/rest/api/2/issue/%s/assignee" %
+        (shared.globals.ROOT_URL, shared.globals.TICKET),
+        json.dumps(update))
+    if result.status_code != 204:
+        post_comment(
+            "[~philip.colmer@linaro.org] Unable to assign issue to '%s'. "
+            "Error code %s and message '%s'" %
+            (person, result.status_code, result.text), False)
+
+
+def find_transition(transition_name):
+    """ Find a transition to get to the desired state and return the matching ID. """
+    url = "%s/rest/api/2/issue/%s/transitions" % (
+        shared.globals.ROOT_URL, shared.globals.TICKET)
+    lower_name = transition_name.lower()
+    result = service_desk_request_get(url)
+    if result.status_code != 200:
+        post_comment(
+            "Unable to get transitions for issue. Error code %s and message '%s'" %
+            (result.status_code, result.text),
+            False)
+        return 0
+    j = result.json()
+    for transition in j['transitions']:
+        if transition['to']['name'].lower() == lower_name:
+            return transition['id']
+
+    msg = (
+        "Unable to find transition to get to state '%s' for issue %s\r\n" %
+        (transition_name, shared.globals.TICKET))
+    msg += "Current status is %s\r\n" % get_current_status()
+    msg += result.text
+    post_comment(msg, False)
+    return 0
+
+
+def get_current_status():
+    """ Return the name of the ticket's current status. """
+    url = "%s/rest/api/2/issue/%s?fields=status" % (
+        shared.globals.ROOT_URL, shared.globals.TICKET)
+    result = service_desk_request_get(url)
+    j = result.json()
+    return j["fields"]["status"]["name"]
+
+
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
     return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
-
-
-def service_desk_request_delete(url):
-    """Centralised routine to DELETE from Service Desk."""
-    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.delete(url, headers=headers, auth=shared.globals.SD_AUTH)
 
 
 def service_desk_request_post(url, data):
