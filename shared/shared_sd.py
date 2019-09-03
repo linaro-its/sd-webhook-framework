@@ -222,13 +222,16 @@ def post_comment(comment, public_switch):
         print("Comment: %s" % comment)
 
 
-def remove_user(username):
-    """ Remove the specified user from Jira. """
-    result = service_desk_request_delete(
-        "%s/rest/api/2/user?username=%s" % (
-            shared.globals.ROOT_URL, username))
-    if result.status_code != 204:
-        print("Got status code %s in remove_user" % result.status_code)
+def deactivate_user(username):
+    """ Deactivate the specified user. """
+    data = {
+        "name": username,
+        "active": False
+    }
+    result = service_desk_request_put(
+        "%s/rest/api/2/user" % shared.globals.ROOT_URL, json.dumps(data))
+    if result.status_code != 200:
+        print("Got status code %s in deactivate_user" % result.status_code)
         print(result.text)
 
 
