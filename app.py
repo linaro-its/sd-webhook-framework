@@ -40,7 +40,7 @@ def create():
             handler.create(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
                 False
             )
     return ""
@@ -60,7 +60,7 @@ def comment():
             handler.comment(shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
                 False
             )
     return ""
@@ -92,7 +92,7 @@ def jira_hook():
                 handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
         except Exception as caught_error:  # pylint: disable=broad-except
             shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(caught_error),
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
                 False
             )
     return ""
