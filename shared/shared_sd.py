@@ -225,11 +225,11 @@ def post_comment(comment, public_switch):
 def deactivate_user(username):
     """ Deactivate the specified user. """
     data = {
-        "name": username,
         "active": False
     }
     result = service_desk_request_put(
-        "%s/rest/api/2/user" % shared.globals.ROOT_URL, json.dumps(data))
+        "%s/rest/api/2/user?username=%s" %
+        (shared.globals.ROOT_URL, username), json.dumps(data))
     if result.status_code != 200:
         print("Got status code %s in deactivate_user" % result.status_code)
         print(result.text)
