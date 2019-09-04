@@ -1,0 +1,17 @@
+__pycache__
+.coverage
+.gitignore
+.pytest_cache
+.scannerwork
+.vscode
+configuration.sample.jsonc
+coverage.xml
+LICENSE
+Pipfile
+Pipfile.lock
+pytest.ini
+README.md
+rt_handlers/__pycache__
+shared/__pycache__
+sonar-project.properties
+tests
