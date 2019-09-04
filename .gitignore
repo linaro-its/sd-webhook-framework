@@ -1,7 +1,8 @@
-.scannerwork
 .coverage
+.pytest_cache
+.scannerwork
+.venv
 .vscode
-.pytest_cache/
 __pycache__
 *.pyc
 cf_cachefile
