@@ -33,7 +33,7 @@ The sample test handler `rt_example_handler.py` lists all of the supported trans
 
 Development of the code is done using a pipenv-maintained virtual environment. The required modules are listed in `Pipfile` and can be installed with:
 
-    pipenv install
+    PIPENV_VENV_IN_PROJECT=True pipenv install
 
 Note that python 3 is **required**.
 
