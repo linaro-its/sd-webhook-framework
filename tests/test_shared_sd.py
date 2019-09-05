@@ -574,3 +574,90 @@ def test_reporter_email_address():
     }
     result = shared_sd.reporter_email_address(ticket_data)
     assert result == "My value"
+
+
+@responses.activate
+def test_get_request_type_id():
+    """ Test get_request_type_id. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/servicedesk/MOCK/requesttype",
+        json={
+            "values": [
+                {
+                    "name": "MOCK_RT",
+                    "id": 3
+                }
+            ]
+        },
+        status=200
+    )
+    result = shared_sd.get_request_type_id("MOCK_RT", "MOCK")
+    assert result == 3
+
+
+@responses.activate
+def test_get_request_type_id_2():
+    """ Test get_request_type_id. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/servicedesk/MOCK/requesttype",
+        json={
+            "values": [
+                {
+                    "name": "MOCK_RT",
+                    "id": 3
+                }
+            ]
+        },
+        status=200
+    )
+    result = shared_sd.get_request_type_id("MOCK_FAIL", "MOCK")
+    assert result == -1
+
+
+@responses.activate
+def test_create_request():
+    """ Test create_request. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/servicedeskapi/request",
+        json={'error': 'not found'},
+        status=404
+    )
+    shared_sd.create_request({})
+
+@mock.patch(
+    'shared.shared_sd.assign_issue_to',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.find_transition',
+    return_value=2,
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@responses.activate
+def test_resolve_ticket(mi1, mi2, mi3):
+    """ Test resolve_ticket. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    shared.globals.CONFIGURATION = {
+        "bot_name": "mock_bot"
+    }
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/api/2/issue/mock-ticket/transitions",
+        json={'error': 'not found'},
+        status=404
+    )
+    shared_sd.resolve_ticket()
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
