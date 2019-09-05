@@ -32,10 +32,10 @@ class OverlappingCredentials(SharedGlobalsError):
 class MissingCFConfig(SharedGlobalsError):
     """ Some part of the CF config is missing. """
 
-def initialise_ticket_data(request_data):
-    """ Initialise the ticket data global """
+def initialise_ticket_data(ticket_data):
+    """ Initialise the ticket data global. """
     global TICKET_DATA
-    TICKET_DATA = json.loads(request_data)
+    TICKET_DATA = ticket_data
 
 
 def initialise_shared_sd():

@@ -125,7 +125,7 @@ def initialise_handler():
 def initialise():
     """ Initialise code and variables for this event. """
     shared.globals.initialise_config()
-    shared.globals.initialise_ticket_data(request.data)
+    shared.globals.initialise_ticket_data(request.json)
     shared.globals.initialise_shared_sd()
     shared.globals.initialise_sd_auth()
     return initialise_handler()
