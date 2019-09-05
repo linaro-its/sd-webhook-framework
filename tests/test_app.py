@@ -113,7 +113,11 @@ def test_intialise(mi1, mi2, mi3, mi4, mi5):
     # The app code includes a variable called APP, so reference that
     # as flask_app to make the code clearer.
     flask_app = app.APP
-    with flask_app.test_request_context('/'):
+    # We don't care what data we set up in the context because we're just
+    # checking that app.initialise calls all the right mocks and returns
+    # the right values. The actual functions that app.initialise calls
+    # are tested elsewhere.
+    with flask_app.test_request_context('/', method="POST", json={'name': 'test'}):
         test_result = app.initialise()
     assert test_result == "mock_handler"
     assert mi1.called is True
