@@ -12,8 +12,7 @@ import shared.globals
 def test_initialise_data():
     """ Test initialise_ticket_data. """
     shared.globals.TICKET_DATA = None
-    data = json.dumps({})
-    shared.globals.initialise_ticket_data(data)
+    shared.globals.initialise_ticket_data({})
     assert shared.globals.TICKET_DATA == {}
 
 def test_initialise_shared_sd():
