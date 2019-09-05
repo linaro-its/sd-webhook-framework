@@ -48,7 +48,7 @@ def get_request_type_id(name, sdid):
         "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
             shared.globals.ROOT_URL, sdid))
     if result.status_code == 200:
-        json_content = json.loads(result.text)
+        json_content = result.json()
         for value in json_content["values"]:
             if value["name"] == name:
                 return value["id"]
