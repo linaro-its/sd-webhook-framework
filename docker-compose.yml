@@ -5,3 +5,7 @@ services:
     image: sd-webhook
     ports:
       - "8000:80"
+    # Uncomment the following two lines (and adjust the path) if your handlers
+    # are *not* in the rt_handlers directory.
+    # volumes:
+    #   - ../sd-webhook-handlers:/app/rt_handlers
