@@ -23,16 +23,98 @@ def test_hello_world():
 
 
 @mock.patch(
-    'app.shared_sd.ticket_request_type',
-    return_value="_example_handler",
+    'app.os.path.exists',
+    return_value=False,
+    autospec=True
+)
+def test_handler_filename(mi1):
+    """ Test handler_filename. """
+    shared.globals.CONFIGURATION = {
+        "handlers": {
+            "mockreqtype": "mockhandler.py",
+            "*": "mockfallback.py"
+        }
+    }
+    assert app.handler_filename(None, "mockreqtype") == "mockhandler.py"
+    assert app.handler_filename(None, "mockreqtype2") == "mockfallback.py"
+    shared.globals.CONFIGURATION = {}
+    assert app.handler_filename(None, "mockreqtype") is None
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.os.path.exists',
+    return_value=True,
+    autospec=True
+)
+def test_handler_filename2(mi1):
+    """ Test handler_filename. """
+    shared.globals.CONFIGURATION = {}
+    assert app.handler_filename(None, "42") == "rt42"
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.os.path.isdir',
+    return_value=False,
     autospec=True
 )
 def test_initialise_handler(mi1):
     """ Test initialise_handler. """
+    # If the directory doesn't exist, we get None back.
+    assert app.initialise_handler() is None
+    assert mi1.called is True
+
+
+@mock.patch(
+    'app.os.path.isdir',
+    return_value=True,
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.ticket_request_type',
+    return_value="_example_handler",
+    autospec=True
+)
+def test_initialise_handler2(mi1, mi2):
+    """ Test initialise_handler. """
     # Note that the repo only ships with an example handler ...
+    shared.globals.CONFIGURATION = {}
     test_result = app.initialise_handler()
     assert test_result is not None
     assert mi1.called is True
+    assert mi2.called is True
+
+
+@mock.patch(
+    'app.os.path.isdir',
+    return_value=True,
+    autospec=True
+)
+@mock.patch(
+    'app.shared_sd.ticket_request_type',
+    return_value="_example_handler",
+    autospec=True
+)
+@mock.patch(
+    'app.handler_filename',
+    return_value="py_example_handler",
+    autospec=True
+)
+@mock.patch(
+    'app.os.path.exists',
+    return_value=False,
+    autospec=True
+)
+def test_initialise_handler3(mi1, mi2, mi3, mi4):
+    """ Test initialise_handler. """
+    shared.globals.CONFIGURATION = {}
+    test_result = app.initialise_handler()
+    assert test_result is None
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert mi4.called is True
 
 
 @mock.patch(

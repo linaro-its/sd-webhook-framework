@@ -1,4 +1,24 @@
 {
+    // HANDLER MAPPINGS
+    //
+    // Declare which request types map onto which handler. In the (very)
+    // unlikely situation that there is a handler that supports all non-specified
+    // request types, the wildcard ("*") entry can be used.
+    //
+    // Normally, each line would look something like this:
+    // "265": "rt265_handler.py"
+    // where "265" is the request type number and the right-hand side is the
+    // filename for the associated handler.
+    //
+    // These mappings can be ignored if the handler filename matches the
+    // format "rt<request type number>.py", e.g. "rt265.py". However, since
+    // request type numbers are not particularly intuitive, using mappings and
+    // sensible filenames for the handlers is better in the long run.
+    "handlers": {
+        // Not necessarily a good idea to leave this in on a production system!
+        "*": "rt_example_handler"
+    },
+
     // CUSTOM FIELDS
     //
     // Specify a JSON file to be used as the cache of IDs for custom fields. Note that

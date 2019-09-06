@@ -31,6 +31,8 @@ Development of the code is done using a Pipenv-maintained virtual environment. T
 
 Note that Python 3 is **required**.
 
+There is a commented configuration file - `configuration.sample.jsonc` - which needs to be copied as `configuration.jsonc` and then edited. This configuration file controls how the framework behaves to meet your specific needs, e.g. Service Desk bot account authentication, which handler file to use for which request type, etc. It is safe to leave the comments in the file - the framework copes with them being there when the file is read in.
+
 ## Code execution
 
 On a development system, [Flask](http://flask.pocoo.org) is used to run the code. In production, you can either use something like Apache with a WSGI handler or [Chalice](https://github.com/aws/chalice/). Currently, WSGI is easier to use as it doesn't require any code modifications, but Chalice allows the code to be run serverless. To make it easier to use the framework with WSGI, this repository includes the files and configuration required to build a Docker container for running everything. See [WSGI](WSGI.md) for more details about how to use the Docker container.

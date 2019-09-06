@@ -98,27 +98,63 @@ def jira_hook():
     return ""
 
 
+def handler_filename(dir_path, reqtype):
+    """ Determine the handler filename for this request type. """
+    #
+    # Is there a handler in the configuration for this request type?
+    if ("handlers" in shared.globals.CONFIGURATION and
+            reqtype in shared.globals.CONFIGURATION["handlers"]):
+        return shared.globals.CONFIGURATION["handlers"][reqtype]
+    #
+    # Is there a file with the right format name?
+    filename = "rt%s" % reqtype
+    if os.path.exists("%s/%s.py" % (dir_path, filename)):
+        return filename
+    #
+    # Is there a wildcard?
+    if ("handlers" in shared.globals.CONFIGURATION and
+            "*" in shared.globals.CONFIGURATION["handlers"]):
+        return shared.globals.CONFIGURATION["handlers"]["*"]
+    #
+    # Nothing doing.
+    return None
+
+
 def initialise_handler():
     """ Load the Python code handling this request type if possible. """
+    #
+    # Check that the handler directory exists.
+    dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
+    if not os.path.isdir(dir_path):
+        print("ERROR! Missing rt_handlers directory", file=sys.stderr)
+        return None
+    #
+    # Work out what the request type number is.
     try:
-        # Get the request type for this data
-        reqtype = "rt%s" % shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
+        reqtype = shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
     except shared_sd.CustomFieldLookupFailure as caught_error:
         shared_sd.post_comment(
             "%s. Please check the configuration and logs." % str(caught_error),
             False
         )
-        reqtype = None
-    if reqtype is not None:
-        # See if there is a module for this request type. If there is,
-        # import it.
-        dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
-        if os.path.isdir(dir_path):
-            if dir_path not in sys.path:
-                sys.path.insert(0, dir_path)
-            if os.path.exists("%s/%s.py" % (dir_path, reqtype)):
-                return importlib.import_module(reqtype)
-            print("Called to handle %s but no handler found." % reqtype, file=sys.stderr)
+        return None
+    #
+    # Work out which handler to use, if there is one.
+    filename = handler_filename(dir_path, reqtype)
+    if filename is not None:
+        if dir_path not in sys.path:
+            sys.path.insert(0, dir_path)
+        if os.path.exists("%s/%s.py" % (dir_path, filename)):
+            return importlib.import_module(filename)
+        print(
+            "ERROR! Cannot find '%s' in rt_handlers directory" % filename,
+            file=sys.stderr)
+
+    print(
+        "Called to handle %s but no handler found." % reqtype,
+        file=sys.stderr)
+    #
+    # No handler for this request type.
     return None
 
 
