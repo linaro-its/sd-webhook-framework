@@ -2,9 +2,7 @@
 
 # Introduction
 
-This repository provides the foundation for supporting webhook automation with Atlassian's Jira Service Desk.
-
-The purpose of the framework is to reduce the amount of code needing to be written to provide webhook extensions to request types on Service Desk. The framework provides the core webhook handling code plus common functions for interacting with Service Desk and LDAP.
+This repository provides a foundation for supporting webhook automation with Atlassian's Jira Service Desk. The aim of the framework is to provide a high quality foundation for providing webhook extensions to request types on Service Desk while  reducing the amount of code needed to be written. The framework provides the core webhook handling code plus common functions for interacting with Service Desk and LDAP, thus allowing the handlers for each request type to focus on the "business logic" required.
 
 ## What the framework supports
 
@@ -31,7 +29,7 @@ Development of the code is done using a Pipenv-maintained virtual environment. T
 
     pipenv install
 
-Note that python 3 is **required**.
+Note that Python 3 is **required**.
 
 ## Code execution
 
@@ -70,6 +68,8 @@ Create a WebHook in Jira with the following settings:
 
 * URL: `<base URL>`/jira-hook
 * Events: Issue>updated
+
+The framework looks at the data sent by Jira and determines if it was an assignment or transition that triggered the event and acts accordingly.
 
 Optionally, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
 

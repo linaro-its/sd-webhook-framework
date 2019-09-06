@@ -10,10 +10,12 @@ To have the framework running in the background, use `sudo docker-compose up -d`
 
 ## Notes
 
-The expectation is that this is all running on the same server as Service Desk and therefore Service Desk/Jira can use `http://localhost:8000`. If that isn't the case, there will be a need to use a web server like Apache or nginx to proxy to the container.
+* The expectation is that this is all running on the same server as Service Desk and therefore Service Desk/Jira can use `http://localhost:8000`. If that isn't the case, there will be a need to use a web server like Apache or nginx to proxy to the container since it is likely that SSL would be required to encrypt communications between Service Desk and the framework.
 
-If any of the handlers need to send email (rather than post comments to the issue), there is shared code to simplify this but some additional work is required:
+* If any of the handlers need to send email (rather than post comments to the issue), there is shared code to simplify this but some additional work is required:
 
-1. If you want to use the MTA on the host system, configure it to listen to all interfaces or add the Docker interface to the list of listened interfaces.
+  1. If you want to use the MTA on the host system, configure it to listen to all interfaces or add the Docker interface to the list of listened interfaces.
 
-2. Otherwise, run a second container which provides the MTA function and edit `docker-compose.yml` so that it starts both containers and puts them into the same network.
+  2. Otherwise, run a second container which provides the MTA function and edit `docker-compose.yml` so that it starts both containers and puts them into the same network.
+
+* To rebuilt the container, use `sudo docker-compose up --rebuild sd-webhook`
