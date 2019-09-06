@@ -178,7 +178,10 @@ def test_initialise_config():
         "ldap_enabled": "True",
         "ldap_server": "wibble",
         "ldap_user": "Bob",
-        "ldap_password": "foo"
+        "ldap_password": "foo",
+        "mail_host": "localhost",
+        "mail_user": "Bob",
+        "mail_password": "foo"
     }
     with patch("builtins.open", mock_open(
             read_data=json.dumps(data)
@@ -277,3 +280,40 @@ def test_config():
         "foo": "wibble"
     }
     assert shared.globals.config("foo") == "wibble"
+
+
+
+@mock.patch(
+    'shared.globals.vault_auth.get_secret',
+    return_value={
+        "data": {
+            "pw": "vault_password"
+        }
+    },
+    autospec=True
+)
+def test_get_email_credentials(mi1):
+    """ Test get_email_credentials. """
+    shared.globals.CONFIGURATION = {}
+    user, password = shared.globals.get_email_credentials()
+    assert user is None
+    assert password is None
+
+    shared.globals.CONFIGURATION = {
+        "mail_user": "mock_user",
+        "mail_password": "mock_password"
+    }
+    user, password = shared.globals.get_email_credentials()
+    assert user == "mock_user"
+    assert password == "mock_password"
+
+    shared.globals.CONFIGURATION = {
+        "mail_user": "mock_user",
+        "vault_mail_name": "mock_vault",
+        "vault_iam_role": "foo",
+        "vault_server_url": "foo"
+    }
+    user, password = shared.globals.get_email_credentials()
+    assert user == "mock_user"
+    assert password == "vault_password"
+    assert mi1.called is True

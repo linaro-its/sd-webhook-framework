@@ -104,7 +104,8 @@ def validate_user_password_config(user_tag, password_tag, vault_user_tag):
     else:
         # We're using a password to authenticate with. Just as a sanity check,
         # make sure that the Vault user tag is not there. We don't care about
-        # the IAM role or server URL because they could be needed by LDAP.
+        # the IAM role or server URL because they could be needed by one of the
+        # other auth sections in the config.
         validate_vault_tag(vault_user_tag, False)
 
 
@@ -113,6 +114,9 @@ def validate_auth_config():
     validate_user_password_config("bot_name", "bot_password", "vault_bot_name")
     if "ldap_enabled" in CONFIGURATION and CONFIGURATION["ldap_enabled"]:
         validate_user_password_config("ldap_user", "ldap_password", "vault_ldap_name")
+    if "mail_host" in CONFIGURATION and "mail_user" in CONFIGURATION:
+        # Only check mail auth if we have a server and a user defined.
+        validate_user_password_config("mail_user", "mail_password", "vault_mail_name")
 
 
 def initialise_config():
@@ -155,6 +159,24 @@ def get_sd_credentials():
         return CONFIGURATION["bot_name"], secret["data"]["pw"]
     return CONFIGURATION["bot_name"],\
         CONFIGURATION["bot_password"]
+
+
+def get_email_credentials():
+    """ Retrieve the credentials required when sending email """
+    global CONFIGURATION
+    if "mail_user" not in CONFIGURATION:
+        return None, None
+    # We already known (from validate_auth_config) that we can only have
+    # either password or vault settings so act accordingly.
+    if "vault_mail_name" in CONFIGURATION:
+        secret = vault_auth.get_secret(
+            CONFIGURATION["vault_mail_name"],
+            iam_role=CONFIGURATION["vault_iam_role"],
+            url=CONFIGURATION["vault_server_url"]
+        )
+        # This assumes that the password will be stored in the "pw" key.
+        return CONFIGURATION["mail_user"], secret["data"]["pw"]
+    return CONFIGURATION["mail_user"], CONFIGURATION["mail_password"]
 
 
 def initialise_sd_auth():

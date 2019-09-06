@@ -1,6 +1,5 @@
 {
-    //
-    // Configuration for the custom fields code.
+    // CUSTOM FIELDS
     //
     // Specify a JSON file to be used as the cache of IDs for custom fields. Note that
     // if this is left commented out, the code will default to using the cf_cachefile
@@ -14,14 +13,16 @@
     // Jira Cloud has not yet been implemented.
     "cf_use_cloud_api": "False",
 
+    // VAULT AUTHENTICATION
     //
     // Common Vault configuration items if Hashicorp Vault is being used to store
     // secrets.
     // "vault_iam_role": "aws-iam-role",
     // "vault_server_url": "https://vault.example.com"
 
+    // SERVICE DESK
     //
-    // Configuration for the service desk code.
+    // The account to be used for *all* Service Desk operations.
     "bot_name": "valid-account-name",
     //
     // Either specify a password for the "bot" ...
@@ -30,8 +31,7 @@
     // or specify the following Vault parameter:
     // "vault_bot_name": "secret/blob/bot_name",
 
-    //
-    // Configuration for LDAP access.
+    // LDAP
     //
     // Set to "False" if you don't use or need LDAP integration
     "ldap_enabled": "True",
@@ -63,4 +63,36 @@
     //
     // or specify the following Vault parameter:
     // "vault_ldap_name": "secret/blob/ldap_name",
+
+    // EMAIL
+    //
+    // The email relay host. Note that if you are using the Docker container,
+    // you either need to configure the host's MTA to listen to the Docker IP
+    // address or you need to run a separate container and network it to the
+    // framework container. Either way, you need to specify an IP address here.
+    //
+    // If it is commented out, attempts to send email will raise an error.
+    "mail_host": "172.17.0.1",
+    //
+    // Uncomment if a port other than 25 is needed.
+    // "mail_port": "587",
+    //
+    // Uncomment if SSL is required for the email connection. If using the MTA
+    // on the host, this would be an unnecessary overhead since all network
+    // traffic is internal.
+    // "mail_ssl": "True",
+    //
+    // Sending username. Leave commented out if no authentication is required.
+    // "mail_user": "",
+    //
+    // If authentication is required, either specify a password ...
+    // "mail_password": "",
+    //
+    // or specify the Vault path to the account's password:
+    // "vault_mail_name": "",
+
+    // Don't touch ...
+    // Leave this entry here so that higher entries can be commented in or
+    // out without worrying about trailing commas.
+    "final_entry": "Finished"
 }
