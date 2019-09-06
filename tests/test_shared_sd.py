@@ -661,3 +661,121 @@ def test_resolve_ticket(mi1, mi2, mi3):
     assert mi1.called is True
     assert mi2.called is True
     assert mi3.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@responses.activate
+def test_assign_issue_to(mi1):
+    """ Test assign_issue_to. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    shared.globals.CONFIGURATION = {
+        "bot_name": "mock_bot"
+    }
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/api/2/issue/mock-ticket/assignee",
+        json={'error': 'not found'},
+        status=404
+    )
+    shared_sd.assign_issue_to("mock-user")
+    assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@responses.activate
+def test_find_transition_failure(mi1):
+    """ Test find_transition. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/api/2/issue/mock-ticket/transitions",
+        json={'error': 'not found'},
+        status=404
+    )
+    shared_sd.find_transition("Foo")
+    assert mi1.called is True
+
+
+@responses.activate
+def test_find_transition_success():
+    """ Test find_transition. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/api/2/issue/mock-ticket/transitions",
+        json={
+            'transitions': [
+                {
+                    "id": "mock_transition_id",
+                    "to": {
+                        "name": "mock_transition_name"
+                    }
+                }
+            ]
+        },
+        status=200
+    )
+    assert shared_sd.find_transition("Mock_Transition_Name") == "mock_transition_id"
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value="Mock result",
+    autospec=True
+)
+@responses.activate
+def test_find_transition_failure2(mi1, mi2):
+    """ Test find_transition. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/api/2/issue/mock-ticket/transitions",
+        json={
+            'transitions': [
+                {
+                    "id": "mock_transition_id",
+                    "to": {
+                        "name": "mock_transition_name"
+                    }
+                }
+            ]
+        },
+        status=200
+    )
+    assert shared_sd.find_transition("ThisOneDoesntExist") == 0
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@responses.activate
+def test_get_current_status():
+    """ Test get_current_status. """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/api/2/issue/mock-ticket?fields=status",
+        json={
+            "fields": {
+                "status": {
+                    "name": "mock-current-status"
+                }
+            }
+        },
+        status=200
+    )
+    assert shared_sd.get_current_status() == "mock-current-status"
