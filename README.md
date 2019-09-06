@@ -4,7 +4,7 @@
 
 This repository provides the foundation for supporting webhook automation with Atlassian's Jira Service Desk.
 
-The purpose of the framework is to reduce the amount of code needing to be written to provide webhook extensions to request types on Service Desk. The framework provides the core webhook handling code plus common functions for interacting with Service Desk and LDAP (to be added).
+The purpose of the framework is to reduce the amount of code needing to be written to provide webhook extensions to request types on Service Desk. The framework provides the core webhook handling code plus common functions for interacting with Service Desk and LDAP.
 
 ## What the framework supports
 
@@ -15,15 +15,11 @@ The framework can be triggered by the following actions:
 * Assignment change on a ticket
 * Status change on a ticket
 
-The first two actions are triggered by Service Desk webhooks. The last two actions are triggered
-by Jira webhooks.
+The first two actions are triggered by Service Desk webhooks. The last two actions are triggered by Jira webhooks.
 
-Each *request type* has its own code file. The main code loads the code file appropriate to the
-ticket being handled.
+Each *request type* has its own code file. The main code loads the code file appropriate to the ticket being handled.
 
-Since the webhooks can be generic across all of the issue/request types, each code file has a
-CAPABILITIES section that the main code queries in order to determine whether or not the
-code can support the desired action, e.g.:
+Since the webhooks can be generic across all of the issue/request types, each code file has a CAPABILITIES section that the main code queries in order to determine whether or not the code can support the desired action, e.g.:
 
     CAPABILITIES = [ "CREATE", "ASSIGNMENT" ]
 
@@ -31,20 +27,21 @@ The sample test handler `rt_example_handler.py` lists all of the supported trans
 
 ## Installation
 
-Development of the code is done using a pipenv-maintained virtual environment. The required modules are listed in `Pipfile` and can be installed with:
+Development of the code is done using a Pipenv-maintained virtual environment. The required modules are listed in `Pipfile` and can be installed with:
 
-    PIPENV_VENV_IN_PROJECT=True pipenv install
+    pipenv install
 
 Note that python 3 is **required**.
 
 ## Code execution
 
-On a development system, [Flask](http://flask.pocoo.org) is used to run the code. In production, you can either use something like Apache with a WSGI handler or [Chalice](https://github.com/aws/chalice/). Currently, WSGI is easier to use as it doesn't require any code modifications, but Chalice allows the code to be run serverless.
+On a development system, [Flask](http://flask.pocoo.org) is used to run the code. In production, you can either use something like Apache with a WSGI handler or [Chalice](https://github.com/aws/chalice/). Currently, WSGI is easier to use as it doesn't require any code modifications, but Chalice allows the code to be run serverless. To make it easier to use the framework with WSGI, this repository includes the files and configuration required to build a Docker container for running everything. See [WSGI](WSGI.md) for more details about how to use the Docker container.
 
 ## Webhook Configuration
 
-For full functionality, both Jira and Service Desk webhooks need to be configured. If none of the request type
-handlers support assignment or status changes, it is safe to omit the Jira webhook since it will never be fired.
+For full functionality, both Jira and Service Desk webhooks need to be configured. If none of the request type handlers support assignment or status changes, it is safe to omit the Jira webhook since it will never be fired.
+
+In the text below, `<base URL>` is the URL that is mapped onto the framework web service. If the framework is being run on the same server as Jira Service Desk, this could be (for example) `http://localhost:8000`.
 
 ### Service Desk webhook
 
@@ -74,10 +71,7 @@ Create a WebHook in Jira with the following settings:
 * URL: `<base URL>`/jira-hook
 * Events: Issue>updated
 
-`<base URL>` is the URL specified for the core webhook automation engine.
-
-Optionally, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order
-to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
+Optionally, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
 
 ## Development
 
@@ -88,7 +82,9 @@ The additional modules required for development can be installed with:
 Unit tests and coverage tests can be executed with:
 
     pipenv shell
-    py.test
+    pytest
+
+If any Python packages are added via Pipenv, please remember to update `requirements.txt` as the latter is used by the Docker container's build process.
 
 ### Code contributions
 
