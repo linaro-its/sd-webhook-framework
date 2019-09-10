@@ -10,7 +10,7 @@ networks:
           gateway: 172.20.0.1
 
 services:
-  sd-webhook:
+  sd_webhook:
     build: .
     image: sd-webhook
     ports:
