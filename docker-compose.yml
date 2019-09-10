@@ -19,5 +19,5 @@ services:
         ipv4_address: 172.20.0.2
     # Uncomment the following two lines (and adjust the path) if your handlers
     # are *not* in the rt_handlers directory.
-    volumes:
-      - ../sd-webhook-handlers:/app/rt_handlers
+    # volumes:
+    #   - ../sd-webhook-handlers:/app/rt_handlers
