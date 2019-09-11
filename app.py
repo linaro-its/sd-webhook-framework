@@ -107,8 +107,8 @@ def handler_filename(dir_path, reqtype):
         return shared.globals.CONFIGURATION["handlers"][reqtype]
     #
     # Is there a file with the right format name?
-    filename = "rt%s.py" % reqtype
-    if os.path.exists("%s/%s" % (dir_path, filename)):
+    filename = "rt%s" % reqtype
+    if os.path.exists("%s/%s.py" % (dir_path, filename)):
         return filename
     #
     # Is there a wildcard?
@@ -144,10 +144,10 @@ def initialise_handler():
     if filename is not None:
         if dir_path not in sys.path:
             sys.path.insert(0, dir_path)
-        if os.path.exists("%s/%s" % (dir_path, filename)):
+        if os.path.exists("%s/%s.py" % (dir_path, filename)):
             return importlib.import_module(filename)
         print(
-            "ERROR! Cannot find '%s/%s'" % (dir_path, filename),
+            "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
             file=sys.stderr)
 
     print(
