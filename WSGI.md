@@ -14,8 +14,8 @@ To have the framework running in the background, use `sudo docker-compose up -d`
 
 * If any of the handlers need to send email (rather than post comments to the issue), there is shared code to simplify this but some additional work is required:
 
-  1. If you want to use the MTA on the host system, configure it to listen to all interfaces or add the Docker interface to the list of listened interfaces.
+  1. If you want to use the MTA on the host system, configure it to (additionally) listen to the Docker bridge interface. Unless altered in `docker-compose.yml`, this will be `172.20.0.0/16`.
 
   2. Otherwise, run a second container which provides the MTA function and edit `docker-compose.yml` so that it starts both containers and puts them into the same network.
 
-* To rebuilt the container, use `sudo docker-compose up --rebuild sd-webhook`
+* To rebuild the container, use `sudo docker-compose up --rebuild sd_webhook`
