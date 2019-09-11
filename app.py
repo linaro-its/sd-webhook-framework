@@ -147,7 +147,7 @@ def initialise_handler():
         if os.path.exists("%s/%s.py" % (dir_path, filename)):
             return importlib.import_module(filename)
         print(
-            "ERROR! Cannot find '%s' in rt_handlers directory" % filename,
+            "ERROR! Cannot find '%s/%s'" % (dir_path, filename),
             file=sys.stderr)
 
     print(
