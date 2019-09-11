@@ -18,4 +18,4 @@ To have the framework running in the background, use `sudo docker-compose up -d`
 
   2. Otherwise, run a second container which provides the MTA function and edit `docker-compose.yml` so that it starts both containers and puts them into the same network.
 
-* To rebuild the container, use `sudo docker-compose up --rebuild sd_webhook`
+* To rebuild the container, use `sudo docker-compose build` or `sudo docker-compose up --build`
