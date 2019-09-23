@@ -79,10 +79,16 @@ def cleanup_if_gmail(email_address):
 
 
 def search_filter(ldap_conn, ldap_filter, filter_param):
-    """ Perform a parameterised filter search. """
+    """
+    Perform a parameterised filter search. If there are any
+    brackets in the filter_param, we "escape" them so that
+    LDAP doesn't have a hissy fit.
+    """
+    safe_filter_param = filter_param.replace("(", "\\28")
+    safe_filter_param = safe_filter_param.replace(")", "\\29")
     return ldap_conn.search(
         base_dn(),
-        search_filter="(%s=%s)" % (ldap_filter, filter_param),
+        search_filter="(%s=%s)" % (ldap_filter, safe_filter_param),
         search_scope=SUBTREE
     )
 
