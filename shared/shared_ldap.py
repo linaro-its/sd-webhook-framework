@@ -344,5 +344,8 @@ def add_to_group(group_name, add_dn):
     gets added to the mailing group.
     """
     if add_dn.split("=", 1)[0] == "uid":
-        add_to_security_group(group_name, add_dn)
-    add_to_mailing_group(group_name, add_dn)
+        part_1 = add_to_security_group(group_name, add_dn)
+    else:
+        part_1 = True
+    part_2 = add_to_mailing_group(group_name, add_dn)
+    return part_1 and part_2
