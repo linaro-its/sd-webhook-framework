@@ -276,6 +276,26 @@ def assign_issue_to(person):
             (person, result.status_code, result.text), False)
 
 
+def transition_request_to(name):
+    """Transition the issue to the specified transition name."""
+    lower_name = name.lower()
+    current_state = get_current_status()
+    if current_state.lower() == lower_name:
+        # Nothing to do.
+        return
+    transition_id = find_transition(lower_name)
+    if transition_id != 0:
+        update = {'transition': {'id': transition_id}}
+        result = service_desk_request_post(
+            "%s/rest/api/2/issue/%s/transitions" %
+            (shared.globals.ROOT_URL, shared.globals.TICKET),
+            json.dumps(update))
+        if result.status_code != 204:
+            post_comment(
+                "Transition '%s' failed with error code %s and message '%s'"
+                % (name, result.status_code, result.text), False)
+
+
 def find_transition(transition_name):
     """ Find a transition to get to the desired state and return the matching ID. """
     url = "%s/rest/api/2/issue/%s/transitions" % (
@@ -309,6 +329,68 @@ def get_current_status():
     result = service_desk_request_get(url)
     j = result.json()
     return j["fields"]["status"]["name"]
+
+
+def central_comment_handler(
+        supported_public_keywords,
+        supported_private_keywords,
+        transition_if_resolved=None):
+    """
+    For a given set of keywords, figure out if they match or not based on
+    the last comment posted.
+    """
+    comment = get_latest_comment()
+    keyword = get_keyword_from_comment(comment)
+
+    # If the ticket is resolved, trigger the reopen transition if the comment
+    # wasn't posted by the bot code. Note that the required transition is
+    # specified by the caller so that the shared code doesn't need to have
+    # any special knowledge of the workflow.
+    if (get_current_status() == "Resolved" and
+            comment['author']['name'] != shared.globals.CONFIGURATION["bot_name"] and
+            transition_if_resolved is not None):
+        transition_request_to(transition_if_resolved)
+
+    if not(comment['public']) and keyword in supported_private_keywords:
+        return (comment, keyword)
+    if comment['public'] and keyword in supported_public_keywords:
+        return (comment, keyword)
+
+    return (comment, None)
+
+
+def get_keyword_from_comment(comment):
+    """Extract the keyword from the comment."""
+    if comment is None:
+        return None
+
+    # Keywords are always single words so we just take the first word and
+    # return it in lower-case.
+    # More complicated than using just split because we don't want punctuation.
+    return "".join((char if char.isalpha() else " ") for
+                   char in comment['body']).split()[0].lower()
+
+
+def get_latest_comment():
+    """Get the latest comment from Service Desk (not JIRA)."""
+    # Although JIRA sends the full issue body when a comment is added, it is
+    # JIRA not Service Desk that does this, so we don't get the public
+    # visibility setting. That is important when we want to trigger certain
+    # keywords posted privately as comments to an issue, so we ask ServiceDesk
+    # to send us the comments instead.
+    start = 0
+    while True:
+        result = service_desk_request_get(
+            "%s/rest/servicedeskapi/request/%s/comment?start=%s" % (
+                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+        if result.status_code != 200:
+            return None
+        j = result.json()
+        # If we're on the last page of comments, return the last comment!
+        if j['isLastPage']:
+            return j['values'][-1]
+        # Get the next batch of comments
+        start += j['size']
 
 
 def service_desk_request_get(url):

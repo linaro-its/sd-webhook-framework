@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """ Test the shared Service Desk library. """
 
+import json
 import mock
 import pytest
 import responses
@@ -779,3 +780,248 @@ def test_get_current_status():
         status=200
     )
     assert shared_sd.get_current_status() == "mock-current-status"
+
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value='mock_current_status',
+    autospec=True
+)
+def test_transition_request_to(mi1):
+    """ Test transition_request_to """
+    # Simple case first - already there
+    shared_sd.transition_request_to("MOCK_CURRENT_STATUS")
+    assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value='mock_undesired_status',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.find_transition',
+    return_value=1,
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@responses.activate
+def test_transition_request_to2(mi1, mi2, mi3):
+    """ A second test of transition_request_to """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.POST,
+        "https://mock-server/rest/api/2/issue/mock-ticket/transitions",
+        status=404
+    )
+    shared_sd.transition_request_to("mock_current_status")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+
+def test_get_keyword_from_comment():
+    """ Test get_keyword_from_comment """
+    assert shared_sd.get_keyword_from_comment(None) is None
+    comment = {
+        "body": "RETRY."
+    }
+    assert shared_sd.get_keyword_from_comment(comment) == "retry"
+    comment = {
+        "body": "Retry this operation"
+    }
+    assert shared_sd.get_keyword_from_comment(comment) == "retry"
+
+@responses.activate
+def test_get_latest_comment():
+    """ Test get_latest_comment """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/mock-ticket/comment?start=0",
+        status=404
+    )
+    first_blob = {
+        "isLastPage": False,
+        "values": [
+            "one",
+            "two"
+        ],
+        "size": 2
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/mock-ticket/comment?start=0",
+        body=json.dumps(first_blob),
+        status=200,
+        content_type='application/json'
+    )
+    second_blob = {
+        "isLastPage": True,
+        "values": [
+            "three",
+            "four"
+        ],
+        "size": 2
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/mock-ticket/comment?start=2",
+        body=json.dumps(second_blob),
+        status=200,
+        content_type='application/json'
+    )
+
+    assert shared_sd.get_latest_comment() is None
+    assert shared_sd.get_latest_comment() == "four"
+
+FAKE_COMMENT_1 = {
+        "author": {
+            "name": "not_mock_bot"
+        },
+        "public": True
+    }
+
+FAKE_COMMENT_2 = {
+        "author": {
+            "name": "not_mock_bot"
+        },
+        "public": False
+    }
+
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_1,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value=None,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.transition_request_to",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value="Resolved",
+    autospec=True
+)
+def test_central_comment_handler(mi1, mi2, mi3, mi4):
+    """ Test central_comment_handler """
+    # Test the resolution handling
+    shared.globals.CONFIGURATION = {
+        "bot_name": "mock_bot"
+    }
+    comment, keyword = shared_sd.central_comment_handler(
+        ["public"], ["private"], "Waiting for support")
+    assert comment == FAKE_COMMENT_1
+    assert keyword is None
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert mi4.called is True
+
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value="Waiting for support",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value="public",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_1,
+    autospec=True
+)
+def test_central_comment_handler2(mi1, mi2, mi3):
+    """ Test central_comment_handler """
+    comment, keyword = shared_sd.central_comment_handler(
+        ["public"], ["private"], "Waiting for support")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert comment == FAKE_COMMENT_1
+    assert keyword == "public"
+
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value="Waiting for support",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value="public",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_1,
+    autospec=True
+)
+def test_central_comment_handler2(mi1, mi2, mi3):
+    """ Test central_comment_handler """
+    comment, keyword = shared_sd.central_comment_handler(
+        ["public"], ["private"], "Waiting for support")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert comment == FAKE_COMMENT_1
+    assert keyword == "public"
+
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value="Waiting for support",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value="public",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_1,
+    autospec=True
+)
+def test_central_comment_handler2(mi1, mi2, mi3):
+    """ Test central_comment_handler """
+    comment, keyword = shared_sd.central_comment_handler(
+        ["public"], ["private"], "Waiting for support")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert comment == FAKE_COMMENT_1
+    assert keyword == "public"
+
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value="Waiting for support",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value="private",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_2,
+    autospec=True
+)
+def test_central_comment_handler3(mi1, mi2, mi3):
+    """ Test central_comment_handler """
+    comment, keyword = shared_sd.central_comment_handler(
+        ["public"], ["private"], "Waiting for support")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert comment == FAKE_COMMENT_2
+    assert keyword == "private"
