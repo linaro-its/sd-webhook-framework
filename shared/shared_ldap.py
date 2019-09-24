@@ -302,6 +302,7 @@ def parameterised_add_to_group(
         }
         # Calculate the DN.
         grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
+        print("Adding %s as a %s attribute to %s" % (member_value, member_attribute, grp_dn))
         return conn.modify(grp_dn, change)
 
 
