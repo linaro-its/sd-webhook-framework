@@ -410,3 +410,31 @@ def test_add_to_group(mi1, mi2):
     shared_ldap.add_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
     assert mi1.called is True
     assert mi2.called is True
+
+
+def mock_parameterised_member_of_group_test(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_member_of_group to test it being
+    called appropriately.
+    """
+    assert group_name == "mock_test_group_name"
+    assert group_location_tag == "ldap_mailing_groups"
+    assert member_attribute == "uniqueMember"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+    return True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_member_of_group",
+    side_effect=mock_parameterised_member_of_group_test,
+    autospec=True
+)
+def test_is_dn_in_group(mi1):
+    """ Test is_dn_in_group """
+    result = shared_ldap.is_dn_in_group("mock_test_group_name", "uid=fred.flintstone,ou=accounts,base_dn")
+    assert result is True
+    assert mi1.called is True

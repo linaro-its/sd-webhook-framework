@@ -234,6 +234,50 @@ def create_account(first_name, family_name, email_address):
     return None
 
 
+def is_dn_in_group(group_name, user_dn):
+    """
+    Simplify checking if someone is in a group. This also avoids
+    the needs for handlers to know about the group_location_tag.
+
+    We only do this for DNs because that is what handlers get back
+    from find_from_email.
+    """
+    return parameterised_member_of_group(
+        group_name,
+        "ldap_mailing_groups",
+        "uniqueMember",
+        user_dn)
+
+
+def parameterised_member_of_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    Determine if the member_value is in the group.
+    """
+    grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
+    with get_ldap_connection() as conn:
+        return conn.search(
+            grp_dn,
+            search_filter="(%s=%s)" % (member_attribute, member_value),
+            search_scope=BASE)
+
+
+def parameterised_build_group_dn(
+        group_name,
+        group_location_tag):
+    """ Calculate the DN for the group depending on the location. """
+    return "cn=%s,%s" % (
+        group_name,
+        string_combo(
+            shared.globals.config(group_location_tag),
+            base_dn(),
+            ","
+        ))
+
+
 def parameterised_add_to_group(
         group_name,
         group_location_tag,
@@ -243,26 +287,21 @@ def parameterised_add_to_group(
     A generalised "add to group" function that can be used for both
     security and mailing groups by adjusting the parameters passed.
     """
-    # Calculate the DN.
-    grp_dn = "cn=%s,%s" % (
-        group_name,
-        string_combo(
-            shared.globals.config(group_location_tag),
-            base_dn(),
-            ","
-        ))
     with get_ldap_connection() as conn:
         # In the group already?
-        if conn.search(
-                grp_dn,
-                search_filter="(%s=%s)" % (member_attribute, member_value),
-                search_scope=BASE):
+        if parameterised_member_of_group(
+                group_name,
+                group_location_tag,
+                member_attribute,
+                member_value):
             return True
 
         # No, so add them.
         change = {
             member_attribute: [(MODIFY_ADD, [member_value])]
         }
+        # Calculate the DN.
+        grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
         return conn.modify(grp_dn, change)
 
 
