@@ -1,4 +1,5 @@
 {
+    "$schema": "https://raw.githubusercontent.com/linaro-its/sd-webhook-framework/master/schema.json",
     // HANDLER MAPPINGS
     //
     // Declare which request types map onto which handler. In the (very)
@@ -28,18 +29,18 @@
     // "cf_cachefile": "~/cf_cachefile.json",
     //
     // If the Custom Field Editor plugin is installed, do you want to use it?
-    "cf_use_plugin_api": "False",
+    "cf_use_plugin_api": false,
     //
     // This has to be False at the moment. Code to support getting CF IDs from
     // Jira Cloud has not yet been implemented.
-    "cf_use_cloud_api": "False",
+    "cf_use_cloud_api": false,
 
     // VAULT AUTHENTICATION
     //
     // Common Vault configuration items if Hashicorp Vault is being used to store
     // secrets.
     // "vault_iam_role": "aws-iam-role",
-    // "vault_server_url": "https://vault.example.com"
+    // "vault_server_url": "https://vault.example.com",
 
     // SERVICE DESK
     //
@@ -55,7 +56,7 @@
     // LDAP
     //
     // Set to "False" if you don't use or need LDAP integration
-    "ldap_enabled": "True",
+    "ldap_enabled": true,
     //
     // Set this to be the name of your LDAP server.
     "ldap_server": "ldaps://ldap-server",
@@ -96,12 +97,12 @@
     "mail_host": "172.17.0.1",
     //
     // Uncomment if a port other than 25 is needed.
-    // "mail_port": "587",
+    // "mail_port": 587,
     //
     // Uncomment if SSL is required for the email connection. If using the MTA
     // on the host, this would be an unnecessary overhead since all network
     // traffic is internal.
-    // "mail_ssl": "True",
+    // "mail_ssl": true,
     //
     // Sending username. Leave commented out if no authentication is required.
     // "mail_user": "",
