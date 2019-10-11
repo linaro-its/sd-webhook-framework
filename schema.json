@@ -5,7 +5,11 @@
     "properties": {
         "handlers": {
             "description": "Declares which request types map onto which handler",
-            "type": "array"
+            "type": "object"
+        },
+        "cf_cachefile": {
+            "description": "Location to use for cache of custom field IDs. Defaults to file stored in the repo",
+            "type": "string"
         },
         "cf_use_plugin_api": {
             "description": "Do you want to use the Custom Field Editor plugin?",
