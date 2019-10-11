@@ -1,0 +1,110 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "Linaro's Service Desk Webhook Framework Configuration Schema",
+    "type": "object",
+    "properties": {
+        "handlers": {
+            "description": "Declares which request types map onto which handler",
+            "type": "array"
+        },
+        "cf_use_plugin_api": {
+            "description": "Do you want to use the Custom Field Editor plugin?",
+            "type": "boolean"
+        },
+        "cf_use_cloud_api": {
+            "description": "Not currently supported",
+            "type": "boolean"
+        },
+        "vault_iam_role": {
+            "description": "AWS IAM role to use when authenticating to Vault",
+            "type": "string"
+        },
+        "vault_server_url": {
+            "description": "Where to reach the Vault server",
+            "type": "string"
+        },
+        "bot_name": {
+            "description": "Account name to be used for all Service Desk operations",
+            "type": "string"
+        },
+        "bot_password": {
+            "description": "Bot's account password",
+            "type": "string"
+        },
+        "vault_bot_name": {
+            "description": "Path to retrieving the bot's password from Vault",
+            "type": "string"
+        },
+        "ldap_enabled": {
+            "description": "Is LDAP integration used?",
+            "type": "boolean"
+        },
+        "ldap_server": {
+            "description": "LDAP server URI",
+            "type": "string"
+        },
+        "ldap_base_dn": {
+            "description": "Base DN for LDAP server or leave blank if to be determined automatically",
+            "type": "string"
+        },
+        "ldap_default_account_ou": {
+            "description": "Where to place new accounts. Base DN will be appended",
+            "type": "string"
+        },
+        "ldap_security_groups": {
+            "description": "Where to find security groups. Base DN will be appended",
+            "type": "string"
+        },
+        "ldap_mailing_groups": {
+            "description": "Where to find mailing groups. Base DN will be appended",
+            "type": "string"
+        },
+        "ldap_user": {
+            "description": "DN of user to be used for LDAP operations",
+            "type": "string"
+        },
+        "ldap_password": {
+            "description": "Password for ldap_user",
+            "type": "string"
+        },
+        "vault_ldap_name": {
+            "description": "Path to retrieving the LDAP user password from Vault",
+            "type": "string"
+        },
+        "mail_host": {
+            "description": "Desired email relay host. Only define if sending email from handlers",
+            "type": "string"
+        },
+        "mail_port": {
+            "description": "Define if a port other than 25 is needed",
+            "type": "integer"
+        },
+        "mail_ssl": {
+            "description": "Define if SSL is required for the email connection",
+            "type": "boolean"
+        },
+        "mail_user": {
+            "description": "Sending username. Only define if authentication is required",
+            "type": "string"
+        },
+        "mail_password": {
+            "description": "Password for mail user",
+            "type": "string"
+        },
+        "vault_mail_name": {
+            "description": "Path to retrieving the mail user's password from Vault",
+            "type": "string"
+        },
+        "final_entry": {
+            "description": "Marker to allow previous entries to be commented out safely",
+            "type": "string"
+        }
+    },
+    "required": [
+        "handlers",
+        "cf_use_plugin_api",
+        "bot_name",
+        "ldap_enabled",
+        "final_entry"
+    ]
+}
