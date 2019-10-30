@@ -5,3 +5,4 @@ Flask
 JSON-minify
 ldap3
 Unidecode
+mod_wsgi
