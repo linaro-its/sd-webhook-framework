@@ -42,7 +42,7 @@ def initialise_shared_sd():
     """ Initialise the code. """
     global ROOT_URL, TICKET, PROJECT
     # Get the ticket details from the data and save it
-    if "issue" not in TICKET_DATA:
+    if TICKET_DATA is None or "issue" not in TICKET_DATA:
         raise MalformedIssueError("Missing 'issue' in data")
     if "self" not in TICKET_DATA["issue"]:
         raise MalformedIssueError("Missing 'self' in issue")
