@@ -305,6 +305,7 @@ def parameterised_add_to_group(
         print("Adding %s as a %s attribute to %s" % (member_value, member_attribute, grp_dn))
         result = conn.modify(grp_dn, change)
         if not result:
+            print("Group modification failed")
             print(conn.result)
         return result
 
