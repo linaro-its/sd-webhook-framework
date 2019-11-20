@@ -198,7 +198,7 @@ def get_next_uid_number():
     return uid_number+1
 
 
-def create_account(first_name, family_name, email_address):
+def create_account(first_name, family_name, email_address, password=None):
     """
     Create an account for the specified person.
 
@@ -224,6 +224,8 @@ def create_account(first_name, family_name, email_address):
     }
     if first_name is not None:
         add_record["givenName"] = first_name.encode('utf-8')
+    if password is not None:
+        add_record["userPassword"] = password
     add_record["uidNumber"] = str(get_next_uid_number())
     with get_ldap_connection() as conn:
         if conn.add(
