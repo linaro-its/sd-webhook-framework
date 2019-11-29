@@ -18,6 +18,8 @@ RUN pip install git+https://github.com/linaro-its/vault_auth.git
 
 WORKDIR /app
 COPY . /app
+RUN chown -R www-data:www-data /app
+
 EXPOSE 8000
 USER www-data
 CMD ["mod_wsgi-express", "start-server", "--log-to-terminal", "--startup-log", "start_app.wsgi"]
