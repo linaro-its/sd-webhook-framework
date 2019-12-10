@@ -393,6 +393,29 @@ def get_latest_comment():
         start += j['size']
 
 
+def deassign_ticket_if_appropriate(last_comment, transition_to=None):
+    """
+    If the current current ticket is assigned to IT Support Bot, deassign
+    it but only if the latest comment wasn't from the bot itself.
+
+    This normally happens when someone publicly comments on a ticket that
+    the bot has processed. Deassigning it allows IT to see the reply.
+    However, if the current state is "Needs approval", we leave it alone
+    because otherwise the approval process breaks.
+    """
+    if get_current_status() == "Needs approval":
+        return
+
+    if last_comment["author"]["name"] == shared.globals.CONFIGURATION["bot_name"]:
+        return
+
+    assignee = shared.globals.TICKET_DATA["issue"]["fields"]["assignee"]
+    if assignee is not None and assignee["name"] == shared.globals.CONFIGURATION["bot_name"]:
+        assign_issue_to(None)
+        if transition_to is not None:
+            transition_request_to(transition_to)
+
+
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
     headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}

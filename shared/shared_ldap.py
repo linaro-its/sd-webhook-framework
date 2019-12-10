@@ -6,8 +6,10 @@ The credentials used by this code must be sufficient for all of
 the functions required, e.g. creating accounts.
 """
 
-from ldap3 import Server, Connection, SUBTREE, LEVEL, BASE, DSA, MODIFY_ADD
+from ldap3 import (BASE, DSA, LEVEL, MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE,
+                   SUBTREE, Connection, Server)
 from unidecode import unidecode
+
 import shared.globals
 
 
@@ -352,3 +354,129 @@ def add_to_group(group_name, add_dn):
         part_1 = True
     part_2 = add_to_mailing_group(group_name, add_dn)
     return part_1 and part_2
+
+
+def parameterised_remove_from_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A generalised "remove from group" function that can be used for both
+    security and mailing groups by adjusting the parameters passed.
+    """
+    with get_ldap_connection() as conn:
+        # Not in the group already?
+        if not parameterised_member_of_group(
+                group_name,
+                group_location_tag,
+                member_attribute,
+                member_value):
+            return True
+
+        # Yes so remove them
+        change = {
+            member_attribute: [(MODIFY_DELETE, [member_value])]
+        }
+        # Calculate the DN.
+        grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
+        print("Removing %s as a %s attribute from %s" % (member_value, member_attribute, grp_dn))
+        result = conn.modify(grp_dn, change)
+        if not result:
+            print("Group modification failed")
+            print(conn.result)
+        return result
+
+
+def remove_from_security_group(group_name, object_dn):
+    """ Remove the user from the specified security group. """
+    # Start by extracting the uid from the DN.
+    uid = object_dn.split("=", 1)[1].split(",", 1)[0]
+    return parameterised_remove_from_group(
+        group_name,
+        "ldap_security_groups",
+        "memberUid",
+        uid
+    )
+
+
+def remove_from_mailing_group(group_name, object_dn):
+    """ Remove the DN from the specified mailing group. """
+    return parameterised_remove_from_group(
+        group_name,
+        "ldap_mailing_groups",
+        "uniqueMember",
+        object_dn
+    )
+
+
+def remove_from_group(group_name, object_dn):
+    """
+    Remove the specified DN from the specified group.
+
+    Linaro's LDAP implementation uses two different types of group:
+    * posixGroup for security groups
+    * groupOfUniqueNames for mailing groups
+
+    The latter can nest other groups, so if "add_dn" starts with cn=
+    instead of uid=, that is a group and not an account, so it just
+    gets removed from the mailing group.
+    """
+    if object_dn.split("=", 1)[0] == "uid":
+        part_1 = remove_from_security_group(group_name, object_dn)
+    else:
+        part_1 = True
+    part_2 = remove_from_mailing_group(group_name, object_dn)
+    return part_1 and part_2
+
+
+def get_object(object_dn, attributes):
+    """ Retrieve the specified object from LDAP. """
+    with get_ldap_connection() as conn:
+        if conn.search(
+                object_dn,
+                search_filter="(objectClass=*)",
+                search_scope=BASE,
+                attributes=attributes):
+            return conn.entries[0]
+    return None
+
+
+def find_matching_objects(ldap_filter, attributes):
+    """ Return any objects matching the search filter."""
+    with get_ldap_connection() as conn:
+        if conn.search(
+                base_dn(),
+                search_filter=ldap_filter,
+                search_scope=SUBTREE,
+                attributes=attributes):
+            return conn.entries
+    return None
+
+
+def replace_attribute_value(object_dn, attribute_name, new_value):
+    """ Replace the value for the specified attribute. """
+    if new_value is None:
+        change = {
+            attribute_name: [(MODIFY_REPLACE, [])]
+        }
+    else:
+        change = {
+            attribute_name: [(MODIFY_REPLACE, [new_value])]
+        }
+    with get_ldap_connection() as conn:
+        conn.modify(
+            object_dn,
+            change
+        )
+
+
+def move_object(current_dn, new_ou):
+    """ Move the specified object into the new OU. """
+    with get_ldap_connection() as conn:
+        if not conn.modify_dn(
+                current_dn,
+                current_dn.split(",", 1)[0],
+                new_superior=new_ou):
+            return conn.result
+    return None
