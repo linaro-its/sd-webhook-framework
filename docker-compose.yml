@@ -15,6 +15,7 @@ services:
     image: sd-webhook
     ports:
       - "8000:8000"
+    restart: always
     networks:
       webhooks:
         ipv4_address: 172.20.0.2
