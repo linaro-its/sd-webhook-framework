@@ -145,6 +145,8 @@ def initialise_handler():
         if dir_path not in sys.path:
             sys.path.insert(0, dir_path)
         if os.path.exists("%s/%s.py" % (dir_path, filename)):
+            print("Importing '%s/%s.py'" % (dir_path, filename),
+                file=sys.stderr)
             return importlib.import_module(filename)
         print(
             "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
