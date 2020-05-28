@@ -201,6 +201,61 @@ def reporter_email_address(ticket_data):
     return None
 
 
+def groups_for_user(email_address):
+    """ Get all of the groups that the user is in. """
+    result = service_desk_request_get(
+        "%s/rest/api/2/user?username=%s&expand=groups" % (
+            shared.globals.ROOT_URL, email_address))
+    groups = []
+    if result.status_code == 200:
+        unpack = result.json()
+        group_list = unpack["groups"]["items"]
+        for group in group_list:
+            groups.append(group["name"])
+    return groups
+
+
+def sd_orgs():
+    """
+    Get a list of the organisations for this project. Return a dict
+    with the org names as the keys and the index number as the value.
+
+    That makes it easier to work out what value to add to the
+    organization custom field.
+    """
+    sd_id = get_servicedesk_id(shared.globals.PROJECT)
+    orgs = {}
+    if sd_id != -1:
+        result = service_desk_request_get(
+            "%s/rest/servicedeskapi/servicedesk/%s/organization" % (
+                shared.globals.ROOT_URL, sd_id))
+        if result.status_code == 200:
+            unpack = result.json
+            org_list = unpack["values"]
+            for org in org_list:
+                orgs[org["Name"]] = int(org["id"])
+    return orgs
+
+
+def add_to_customfield_value(cf_id, value):
+    """ Save the specified value to the custom field. """
+    data = {
+        "update": {
+            cf_id: [
+                {
+                    "set": {
+                        "value": value
+                    }
+                }
+            ]
+        }
+    }
+    service_desk_request_put(
+        "%s/rest/api/2/issue/%s" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET),
+        json.dumps(data))
+
+
 def post_comment(comment, public_switch):
     """ Post a comment to the current issue. """
     new_comment = {}
