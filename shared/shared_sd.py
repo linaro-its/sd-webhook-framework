@@ -104,7 +104,7 @@ def ticket_request_type(ticket_data):
     if cf_name not in ticket_data["issue"]["fields"]:
         raise MalformedIssueError(
             "Failed to find '%s' in issue fields" % cf_name)
-    if "requestType" not in ticket_data["issue"]["fields"][cf_name]:
+    if ticket_data["issue"]["fields"][cf_name] is None:
         # Probably a Jira issue not a SD issue
         return None
     return ticket_data["issue"]["fields"][cf_name]["requestType"]["id"]
