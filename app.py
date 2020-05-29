@@ -100,16 +100,17 @@ def jira_hook():
 
 def handler_filename(dir_path, reqtype):
     """ Determine the handler filename for this request type. """
-    #
-    # Is there a handler in the configuration for this request type?
-    if ("handlers" in shared.globals.CONFIGURATION and
-            reqtype in shared.globals.CONFIGURATION["handlers"]):
-        return shared.globals.CONFIGURATION["handlers"][reqtype]
-    #
-    # Is there a file with the right format name?
-    filename = "rt%s" % reqtype
-    if os.path.exists("%s/%s.py" % (dir_path, filename)):
-        return filename
+    if reqtype is not None:
+        #
+        # Is there a handler in the configuration for this request type?
+        if ("handlers" in shared.globals.CONFIGURATION and
+                reqtype in shared.globals.CONFIGURATION["handlers"]):
+            return shared.globals.CONFIGURATION["handlers"][reqtype]
+        #
+        # Is there a file with the right format name?
+        filename = "rt%s" % reqtype
+        if os.path.exists("%s/%s.py" % (dir_path, filename)):
+            return filename
     #
     # Is there a wildcard?
     if ("handlers" in shared.globals.CONFIGURATION and
@@ -146,7 +147,7 @@ def initialise_handler():
             sys.path.insert(0, dir_path)
         if os.path.exists("%s/%s.py" % (dir_path, filename)):
             print("Importing '%s/%s.py'" % (dir_path, filename),
-                file=sys.stderr)
+                  file=sys.stderr)
             return importlib.import_module(filename)
         print(
             "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
