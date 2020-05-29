@@ -191,14 +191,19 @@ def get_field(ticket_data, field_id):
     return None
 
 
-def reporter_email_address(ticket_data):
-    """ Get the reporter's email address from the ticket data. """
+def get_reporter_field(ticket_data, field_name):
+    """ Generalised function to get a field back for the reporter. """
     if ("issue" in ticket_data and
             "fields" in ticket_data["issue"] and
             "reporter" in ticket_data["issue"]["fields"] and
-            "emailAddress" in ticket_data["issue"]["fields"]["reporter"]):
-        return ticket_data["issue"]["fields"]["reporter"]["emailAddress"]
+            field_name in ticket_data["issue"]["fields"]["reporter"]):
+        return ticket_data["issue"]["fields"]["reporter"][field_name]
     return None
+
+
+def reporter_email_address(ticket_data):
+    """ Get the reporter's email address from the ticket data. """
+    return get_reporter_field(ticket_data, "emailAddress")
 
 
 def groups_for_user(email_address):
@@ -231,6 +236,12 @@ def sd_orgs():
                 shared.globals.ROOT_URL, sd_id))
         if result.status_code == 200:
             unpack = result.json()
+            save_text_as_attachment(
+                "Test",
+                json.dumps(unpack),
+                "Test",
+                False
+            )
             org_list = unpack["values"]
             for org in org_list:
                 orgs[org["Name"]] = int(org["id"])
