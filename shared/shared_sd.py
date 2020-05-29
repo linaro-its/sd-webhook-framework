@@ -248,17 +248,20 @@ def add_to_customfield_value(cf_id, value):
         "update": {
             cf_id: [
                 {
-                    "set": {
+                    "add": {
                         "value": value
                     }
                 }
             ]
         }
     }
-    service_desk_request_put(
+    result = service_desk_request_put(
         "%s/rest/api/2/issue/%s" % (
             shared.globals.ROOT_URL, shared.globals.TICKET),
         json.dumps(data))
+    if result.status_code != 204:
+        print("Got status code %s in add_to_customfield_value" % result.status_code)
+        print(json.dumps(data))
 
 
 def post_comment(comment, public_switch):
