@@ -248,9 +248,7 @@ def add_to_customfield_value(cf_id, value):
         "update": {
             cf_id: [
                 {
-                    "add": {
-                        "value": value
-                    }
+                    "add": value
                 }
             ]
         }
