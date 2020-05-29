@@ -230,8 +230,7 @@ def sd_orgs():
             "%s/rest/servicedeskapi/servicedesk/%s/organization" % (
                 shared.globals.ROOT_URL, sd_id))
         if result.status_code == 200:
-            unpack = result.json
-            save_text_as_attachment("OrgData", result, "Project organisations", False)
+            unpack = result.json()
             org_list = unpack["values"]
             for org in org_list:
                 orgs[org["Name"]] = int(org["id"])
