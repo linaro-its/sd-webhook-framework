@@ -263,7 +263,7 @@ def add_to_customfield_value(cf_id, value):
         print("Got status code %s in add_to_customfield_value" % result.status_code)
         print("Url: %s/rest/api/2/issue/%s" % (
             shared.globals.ROOT_URL, shared.globals.TICKET))
-        print(response.text)
+        print(result.text)
         print(json.dumps(data))
 
 
