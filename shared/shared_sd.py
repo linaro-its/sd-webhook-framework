@@ -236,15 +236,9 @@ def sd_orgs():
                 shared.globals.ROOT_URL, sd_id))
         if result.status_code == 200:
             unpack = result.json()
-            save_text_as_attachment(
-                "Test",
-                json.dumps(unpack),
-                "Test",
-                False
-            )
             org_list = unpack["values"]
             for org in org_list:
-                orgs[org["Name"]] = int(org["id"])
+                orgs[org["name"]] = int(org["id"])
     return orgs
 
 
