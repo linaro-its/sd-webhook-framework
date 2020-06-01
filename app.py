@@ -18,6 +18,19 @@ from flask import Flask, request
 import shared.globals
 import shared.shared_sd as shared_sd
 
+# Using sentry.io makes it easier to catch errors, particularly when the
+# code is running insider a container and the logs might not be actively
+# checked.
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+# Uncomment the following lines and set the HTTPS URL to the correct one
+# for your own Sentry project. This must stay before the Flask initialisation.
+# sentry_sdk.init(
+#     dns="https://",
+#     integrations=[FlaskIntegration()]
+# )
+
 
 APP = Flask(__name__)
 
@@ -26,6 +39,12 @@ APP = Flask(__name__)
 def hello_world():
     """ A simple test to confirm that the code is running properly. """
     return "Hello, world!"
+
+
+@APP.route('/test-sentry', methods=['GET'])
+def test_sentry():
+    """ A simple test to provoke reporting back to Sentry. """
+
 
 
 @APP.route('/create', methods=['POST'])
