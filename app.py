@@ -27,9 +27,9 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 # Uncomment the following lines and set the HTTPS URL to the correct one
 # for your own Sentry project. This must stay before the Flask initialisation.
-if sentry_config.SENTRY_DSN is not None:
+if shared.sentry_config.SENTRY_DSN is not None:
     sentry_sdk.init(
-        dsn=sentry_config.SENTRY_DSN,
+        dsn=shared.sentry_config.SENTRY_DSN,
         integrations=[FlaskIntegration()],
         release="sd-webhook-framework@1.0.0"
     )
@@ -47,7 +47,7 @@ def hello_world():
 @APP.route('/test-sentry', methods=['GET'])
 def test_sentry():
     """ A simple test to provoke reporting back to Sentry. """
-    failure = 1/0
+    _ = 1/0
 
 
 @APP.route('/create', methods=['POST'])
