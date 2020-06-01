@@ -6,4 +6,4 @@ JSON-minify
 ldap3
 Unidecode
 mod_wsgi
-sentry-sdk
+sentry-sdk[flask]
