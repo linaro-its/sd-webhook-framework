@@ -17,6 +17,7 @@ import traceback
 from flask import Flask, request
 import shared.globals
 import shared.shared_sd as shared_sd
+import shared.sentry_config
 
 # Using sentry.io makes it easier to catch errors, particularly when the
 # code is running insider a container and the logs might not be actively
@@ -26,10 +27,12 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 # Uncomment the following lines and set the HTTPS URL to the correct one
 # for your own Sentry project. This must stay before the Flask initialisation.
-# sentry_sdk.init(
-#     dsn="https://",
-#     integrations=[FlaskIntegration()]
-# )
+if sentry_config.SENTRY_DSN is not None:
+    sentry_sdk.init(
+        dsn=sentry_config.SENTRY_DSN,
+        integrations=[FlaskIntegration()],
+        release="sd-webhook-framework@1.0.0"
+    )
 
 
 APP = Flask(__name__)
