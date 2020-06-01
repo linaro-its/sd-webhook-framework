@@ -44,7 +44,7 @@ def hello_world():
 @APP.route('/test-sentry', methods=['GET'])
 def test_sentry():
     """ A simple test to provoke reporting back to Sentry. """
-
+    failure = 1/0
 
 
 @APP.route('/create', methods=['POST'])
