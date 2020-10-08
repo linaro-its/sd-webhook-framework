@@ -23,3 +23,4 @@ vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
 ldap3 = "*"
 unidecode = "*"
 sentry-sdk = "*"
+google-api-python-client = "*"
