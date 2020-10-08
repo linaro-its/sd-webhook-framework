@@ -11,6 +11,7 @@ from ldap3 import (BASE, DSA, LEVEL, MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE,
 from unidecode import unidecode
 
 import shared.globals
+import shared.shared_google as shared_google
 
 
 class NotEnabledError(Exception):
@@ -480,3 +481,37 @@ def move_object(current_dn, new_ou):
                 new_superior=new_ou):
             return conn.result
     return None
+
+
+def find_group(name, attributes):
+    """ Try to find a group with the given email address or, failing that, the name. """
+    if "@" not in name:
+        # We don't have an email address so try to get one
+        result = find_matching_objects(
+            "(&(objectClass=groupOfUniqueNames)(cn=%s))" % name,
+            ["mail"]
+        )
+        if result is None:
+            result = []
+        if len(result) != 1:
+            return (name, result)
+        mail_entry = result[0].mail.value
+        if mail_entry is not None:
+            name = mail_entry
+
+    # Now get the values for the specified attributes for
+    # this group.
+    result = find_matching_objects(
+        "(&(objectClass=groupOfUniqueNames)(mail=%s))" % name,
+        attributes
+    )
+    if result is None:
+        result = []
+
+    # Let's try and be super smart and see if this is an alias for a group :)
+    if result == [] and shared.globals.CONFIGURATION["google_enabled"]:
+        google = shared_google.check_group_alias(name)
+        if google is not None:
+            return find_group(google, attributes)
+
+    return (name, result)
