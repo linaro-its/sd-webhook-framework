@@ -53,9 +53,23 @@
     // or specify the following Vault parameter:
     // "vault_bot_name": "secret/blob/bot_name",
 
+    // GOOGLE
+    //
+    // Set to "false" if you don't use or need Google integration
+    "google_enabled": true,
+    //
+    // Admin account (used for some delegated authentication)
+    "google_admin": "wibble@wibble.com",
+    //
+    // Either specify a path to the service account JSON file ...
+    // "google_json_file": "",
+    //
+    // or specify the following Vault parameter:
+    // "vault_google_name": "secret/blob/google_name"
+
     // LDAP
     //
-    // Set to "False" if you don't use or need LDAP integration
+    // Set to "false" if you don't use or need LDAP integration
     "ldap_enabled": true,
     //
     // Set this to be the name of your LDAP server.
