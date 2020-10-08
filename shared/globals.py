@@ -131,6 +131,19 @@ def initialise_config():
     validate_auth_config()
 
 
+def get_google_credentials():
+    """ Retrieve the Google JSON blob """
+    global CONFIGURATION
+    if "google_json_file" not in CONFIGURATION:
+        secret = vault_auth.get_secret(
+            CONFIGURATION["vault_google_name"],
+            iam_role=CONFIGURATION["vault_iam_role"],
+            url=CONFIGURATION["vault_server_url"]
+        )
+        return secret["data"]["pw"]
+    return json.load(open(CONFIGURATION["google_json_file"]))
+
+
 def get_ldap_credentials():
     """ Retrieve the credentials required by the LDAP code """
     global CONFIGURATION
