@@ -25,8 +25,7 @@ import shared.sentry_config
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
 
-# Uncomment the following lines and set the HTTPS URL to the correct one
-# for your own Sentry project. This must stay before the Flask initialisation.
+# This must stay before the Flask initialisation.
 if shared.sentry_config.SENTRY_DSN is not None:
     sentry_sdk.init(
         dsn=shared.sentry_config.SENTRY_DSN,
