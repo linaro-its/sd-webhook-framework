@@ -186,10 +186,10 @@ def initialise():
     """ Initialise code and variables for this event. """
     try:
         shared.globals.initialise_config()
-    except shared.globals.MissingCFConfig as exc:
+        shared.globals.initialise_ticket_data(request.json)
+        shared.globals.initialise_shared_sd()
+        shared.globals.initialise_sd_auth()
+    except Exception as exc:
         print(exc)
         return None
-    shared.globals.initialise_ticket_data(request.json)
-    shared.globals.initialise_shared_sd()
-    shared.globals.initialise_sd_auth()
     return initialise_handler()
