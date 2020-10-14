@@ -1,10 +1,12 @@
 """ Manages and initialises globals used across the code. """
 
-import os
 import json
+import os
+import sys
+
+import vault_auth
 from json_minify import json_minify
 from requests.auth import HTTPBasicAuth
-import vault_auth
 
 CONFIGURATION = None
 
@@ -130,7 +132,9 @@ def initialise_config():
     # All of the webhook code is in a sub-directory so we
     # expect to find the configuration file one level up.
     basedir = os.path.dirname(os.path.dirname(__file__))
-    with open(os.path.join(basedir, "configuration.jsonc")) as handle:
+    config_file = os.path.join(basedir, "configuration.jsonc")
+    print("Reading config from %s" % config_file, file=sys.stderr)
+    with open(config_file) as handle:
         CONFIGURATION = json.loads(json_minify(handle.read()))
     validate_cf_config()
     validate_auth_config()
