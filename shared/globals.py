@@ -134,8 +134,11 @@ def initialise_config():
     basedir = os.path.dirname(os.path.dirname(__file__))
     config_file = os.path.join(basedir, "configuration.jsonc")
     print("Reading config from %s" % config_file, file=sys.stderr)
-    with open(config_file) as handle:
-        CONFIGURATION = json.loads(json_minify(handle.read()))
+    try:
+        with open(config_file) as handle:
+            CONFIGURATION = json.loads(json_minify(handle.read()))
+    except json.decoder.JSONDecodeError:
+        raise MissingCFConfig("Unable to decode configuration file successfully")
     validate_cf_config()
     validate_auth_config()
 
