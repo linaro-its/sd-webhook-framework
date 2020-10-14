@@ -11,7 +11,6 @@ ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
 RUN pip install -U pip setuptools wheel
-
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
 RUN pip install git+https://github.com/linaro-its/vault_auth.git
@@ -19,6 +18,9 @@ RUN pip install git+https://github.com/linaro-its/vault_auth.git
 WORKDIR /app
 COPY . /app
 RUN chown -R www-data:www-data /app
+
+# Validate the configuration file
+RUN python3 /app/validate_config.py
 
 EXPOSE 8000
 USER www-data
