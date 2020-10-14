@@ -24,4 +24,4 @@ RUN python3 /app/validate_config.py
 
 EXPOSE 8000
 USER www-data
-CMD ["mod_wsgi-express", "start-server", "--log-to-terminal", "--startup-log", "start_app.wsgi"]
+CMD ["mod_wsgi-express", "start-server", "--log-level", "info", "--log-to-terminal", "--startup-log", "start_app.wsgi"]
