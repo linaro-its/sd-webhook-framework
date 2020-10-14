@@ -1,9 +1,10 @@
-urllib3>=1.24.2
-Jinja2>=2.10.1
-requests>=2.22.0
-Flask
-JSON-minify
-ldap3
-Unidecode
+urllib3==1.25.10
+Jinja2==2.11.2
+requests==2.24.0
+Flask==1.1.2
+JSON-minify==0.3.0
+ldap3==2.8.1
+Unidecode==1.1.1
+google-api-python-client==1.12.3
 mod_wsgi
 sentry-sdk[flask]
