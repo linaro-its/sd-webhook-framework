@@ -239,19 +239,43 @@ def create_account(first_name, family_name, email_address, password=None):
     return None
 
 
-def is_dn_in_group(group_name, user_dn):
+def is_user_in_group(group_name, user_email, recurse=False):
+    user_dn = find_from_email(user_email)
+    return is_dn_in_group(group_name, user_dn, recurse)
+
+
+def is_dn_in_group(group_name, user_dn, recurse=False):
     """
     Simplify checking if someone is in a group. This also avoids
     the needs for handlers to know about the group_location_tag.
 
     We only do this for DNs because that is what handlers get back
     from find_from_email.
+
+    We optionally recurse through nested groups.
     """
-    return parameterised_member_of_group(
+    result = parameterised_member_of_group(
         group_name,
         "ldap_mailing_groups",
         "uniqueMember",
         user_dn)
+    if result or not recurse:
+        return result
+    #
+    # See if there are any groups nested in this group. The use of
+    # the uniqueMember filter ensures we only get the mailing list.
+    group_details = find_matching_objects(
+        "(&(cn=%s)(uniqueMember=*))" % group_name,
+        ["uniqueMember"])
+    if group_details is None:
+        # Shouldn't happen as we know the group exists
+        return False
+    for m in group_details[0].uniqueMember.values:
+        if m[:3] == "cn=":
+            group_cn = extract_id_from_dn(m)
+            if is_dn_in_group(group_cn, user_dn):
+                return True
+    return False
 
 
 def parameterised_member_of_group(
@@ -315,10 +339,18 @@ def parameterised_add_to_group(
         return result
 
 
+def extract_id_from_dn(dn):
+    # Returns the CN or the UID from the DN
+    # Given a DN of, say, cn=everyone,ou=mailing,ou=groups,dc=linaro,dc=org
+    # split("=", 1)[1] returns everything after the first =
+    # split(",", 1)[0] returns everything before the first ,
+    return dn.split("=", 1)[1].split(",", 1)[0]
+
+
 def add_to_security_group(group_name, add_dn):
     """ Add the user to the specified security group. """
     # Start by extracting the uid from the DN.
-    uid = add_dn.split("=", 1)[1].split(",", 1)[0]
+    uid = extract_id_from_dn(add_dn)
     return parameterised_add_to_group(
         group_name,
         "ldap_security_groups",
@@ -333,6 +365,26 @@ def add_to_mailing_group(group_name, add_dn):
         group_name,
         "ldap_mailing_groups",
         "uniqueMember",
+        add_dn
+    )
+
+
+def add_owner_to_security_group(group_name, add_dn):
+    """ Add the DN as an owner to the specified security group. """
+    return parameterised_add_to_group(
+        group_name,
+        "ldap_security_groups",
+        "owner",
+        add_dn
+    )
+
+
+def add_owner_to_mailing_group(group_name, add_dn):
+    """ Add the DN as an owner to the specified mailing group. """
+    return parameterised_add_to_group(
+        group_name,
+        "ldap_mailing_groups",
+        "owner",
         add_dn
     )
 
@@ -354,6 +406,12 @@ def add_to_group(group_name, add_dn):
     else:
         part_1 = True
     part_2 = add_to_mailing_group(group_name, add_dn)
+    return part_1 and part_2
+
+
+def add_owner_to_group(group_name, add_dn):
+    part_1 = add_owner_to_security_group(group_name, add_dn)
+    part_2 = add_owner_to_mailing_group(group_name, add_dn)
     return part_1 and part_2
 
 
@@ -392,7 +450,7 @@ def parameterised_remove_from_group(
 def remove_from_security_group(group_name, object_dn):
     """ Remove the user from the specified security group. """
     # Start by extracting the uid from the DN.
-    uid = object_dn.split("=", 1)[1].split(",", 1)[0]
+    uid = extract_id_from_dn(object_dn)
     return parameterised_remove_from_group(
         group_name,
         "ldap_security_groups",
@@ -407,6 +465,26 @@ def remove_from_mailing_group(group_name, object_dn):
         group_name,
         "ldap_mailing_groups",
         "uniqueMember",
+        object_dn
+    )
+
+
+def remove_owner_from_security_group(group_name, object_dn):
+    """ Remove the DN from the specified security group's owners. """
+    return parameterised_remove_from_group(
+        group_name,
+        "ldap_security_groups",
+        "owner",
+        object_dn
+    )
+
+
+def remove_owner_from_mailing_group(group_name, object_dn):
+    """ Remove the DN from the specified mailing group's owners. """
+    return parameterised_remove_from_group(
+        group_name,
+        "ldap_mailing_groups",
+        "owner",
         object_dn
     )
 
@@ -428,6 +506,12 @@ def remove_from_group(group_name, object_dn):
     else:
         part_1 = True
     part_2 = remove_from_mailing_group(group_name, object_dn)
+    return part_1 and part_2
+
+
+def remove_owner_from_group(group_name, object_dn):
+    part_1 = remove_owner_from_security_group(group_name, object_dn)
+    part_2 = remove_owner_from_mailing_group(group_name, object_dn)
     return part_1 and part_2
 
 
@@ -485,6 +569,7 @@ def move_object(current_dn, new_ou):
 
 def find_group(name, attributes):
     """ Try to find a group with the given email address or, failing that, the name. """
+    """ Returns the canonical email address for the found group and the requested attributes. """
     if "@" not in name:
         # We don't have an email address so try to get one
         result = find_matching_objects(
@@ -515,3 +600,78 @@ def find_group(name, attributes):
             return find_group(google, attributes)
 
     return (name, result)
+
+
+def reporter_is_group_owner(owner_list):
+    """Check whether or not the reporter is an owner of the group."""
+    # Start by getting the full DN for the reporter.
+    reporter_dn = find_from_email(shared.globals.REPORTER)
+    if reporter_dn is None:
+        # Shouldn't happen ...
+        return False
+    
+    is_owner = False
+    for owner in owner_list:
+        if ",ou=mailing," in owner:
+            grp_name = owner.split(',', 1)[0].split('=')[1]
+            if is_dn_in_group(grp_name, reporter_dn):
+                is_owner = True
+        elif owner == reporter_dn:
+            is_owner = True
+    return is_owner
+
+
+def flatten_list(starting_list):
+    """ Expand groups to individuals to end up with a single list of names. """
+    result = []
+    for item in starting_list:
+        if item != "":
+            if ",ou=mailing," in item:
+                name = extract_id_from_dn(item)
+                recurse = get_group_membership(name)
+                for member in recurse:
+                    if member not in result:
+                        result.append(member)
+            elif item not in result:
+                result.append(item)
+    return result
+
+
+def get_group_membership(group_name):
+    """ Recursively build list of everyone in the specified group. """
+    _, result = find_group(group_name, ["uniqueMember"])
+    members = []
+    for member in result[0].uniqueMember.values:
+        if ",ou=mailing," in member:
+            members += get_group_membership(member)
+        else:
+            members.append(member)
+    return members
+
+
+def find_single_object_from_email(email_address):
+    """
+    Try to find a single object in LDAP that matches the provided
+    email address. Return None if no match or more than 1 match.
+    """
+    result = find_matching_objects(
+        "(&(objectClass=groupOfUniqueNames)(mail=%s))" % email_address,
+        ["cn"])
+    if len(result) == 1:
+        return result[0].entry_dn
+
+    result = find_matching_objects(
+        "(&(objectClass=posixAccount)(mail=%s))" % cleanup_if_gmail(email_address),
+        ["cn"])
+    if len(result) == 1:
+        return result[0].entry_dn
+    
+    # If still no match, try again without the GMail cleanup just in case
+    # a GMail account was added without the cleanup.
+    result = find_matching_objects(
+        "(&(objectClass=posixAccount)(mail=%s))" % email_address,
+        ["cn"])
+    if len(result) == 1:
+        return result[0].entry_dn
+
+    return None

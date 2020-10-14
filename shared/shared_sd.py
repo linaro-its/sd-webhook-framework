@@ -14,9 +14,12 @@ vault_auth can be found at https://github.com/linaro-its/vault_auth
 
 import json
 from datetime import datetime
+
 import requests
-import shared.globals
+
 import shared.custom_fields as custom_fields
+import shared.globals
+import shared.shared_ldap as shared_ldap
 
 
 class SharedSDError(Exception):
@@ -481,6 +484,103 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
         assign_issue_to(None)
         if transition_to is not None:
             transition_request_to(transition_to)
+
+
+def assign_approvers(approver_list, cf):
+    """
+        Add the list of approvers to the specified custom field,
+        making them request participants as well if needed.
+    """
+    flat_list = shared_ldap.flatten_list(approver_list)
+    approvers = {"fields": {cf: []}}
+    for item in flat_list:
+        if item != "":
+            # Cope with being sent email addresses already
+            if "@" in item:
+                item_email = item
+            else:
+                obj = shared_ldap.get_object(item, ["mail"])
+                item_email = obj.mail.value
+            if item_email is not None:
+                approvers["fields"][cf].append(
+                    {'name': item_email})
+                # Add them as a request participant so that they get copies of
+                # any comment notifications.
+                if not is_request_participant(item_email):
+                    add_request_participant(item_email)
+    result = service_desk_request_put(
+        shared.globals.TICKET_DATA["issue"]["self"],
+        json.dumps(approvers))
+    if result.status_code != 204:
+        post_comment(
+            "Got error %s (%s) when setting the"
+            " approvers:\r\n{panel}%s{panel}\r\n" % (
+                result.text, result.status_code, approvers), False)
+
+
+def set_summary(summary):
+    """Set the summary of the issue to the specified string."""
+    data = '{"update":{"summary":[{"set": "%s"}]}}' % summary
+    service_desk_request_put("%s/rest/api/2/issue/%s" % (
+        shared.globals.ROOT_URL, shared.globals.TICKET), data)
+    # Update our copy of the ticket data to reflect the new summary
+    shared.globals.TICKET_DATA["issue"]["fields"]["summary"] = summary
+
+
+def add_request_participant(email_address):
+    # Add the specified email address as a request participant to the current
+    # issue.
+    update = {'usernames': [email_address]}
+    json_update = json.dumps(update)
+    result = service_desk_request_post(
+        "%s/rest/servicedeskapi/request/%s/participant" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET), json_update)
+    if result.status_code != 200:
+        post_comment(
+            "Unable to add %s as request "
+            "participant to %s. Error code %s and message '%s'" % (
+                email_address, shared.globals.TICKET, result.status_code, result.text),
+            False
+        )
+
+
+def is_request_participant(email_address):
+    # Check if the specified email address is a request participant on the
+    # current issue.
+    start = 0
+    while True:
+        result = service_desk_request_get(
+            "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+        if result.status_code != 200:
+            return False
+        j = result.json()
+        for v in j['values']:
+            if v['emailAddress'] == email_address:
+                return True
+        if not(j['isLastPage']):
+            start += j['size']
+        else:
+            return False
+
+
+def get_request_participants():
+    """Returns a lit of request participants for the current issue."""
+    list_of_participants = []
+    start = 0
+    while True:
+        result = service_desk_request_get(
+            "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+        if result.status_code != 200:
+            return []
+        j = result.json()
+        for v in j['values']:
+            list_of_participants.append(v['emailAddress'])
+        if not(j['isLastPage']):
+            start += j['size']
+        else:
+            return list_of_participants
 
 
 def service_desk_request_get(url):
