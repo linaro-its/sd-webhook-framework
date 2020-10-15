@@ -152,7 +152,7 @@ def get_google_credentials():
             iam_role=CONFIGURATION["vault_iam_role"],
             url=CONFIGURATION["vault_server_url"]
         )
-        return secret["data"]["pw"]
+        return json.loads(secret["data"]["pw"])
     return json.load(open(CONFIGURATION["google_json_file"]))
 
 
