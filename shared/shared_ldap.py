@@ -659,13 +659,13 @@ def find_single_object_from_email(email_address):
     result = find_matching_objects(
         "(&(objectClass=groupOfUniqueNames)(mail=%s))" % email_address,
         ["cn"])
-    if len(result) == 1:
+    if result is not None and len(result) == 1:
         return result[0].entry_dn
 
     result = find_matching_objects(
         "(&(objectClass=posixAccount)(mail=%s))" % cleanup_if_gmail(email_address),
         ["cn"])
-    if len(result) == 1:
+    if result is not None and len(result) == 1:
         return result[0].entry_dn
     
     # If still no match, try again without the GMail cleanup just in case
@@ -673,7 +673,7 @@ def find_single_object_from_email(email_address):
     result = find_matching_objects(
         "(&(objectClass=posixAccount)(mail=%s))" % email_address,
         ["cn"])
-    if len(result) == 1:
+    if result is not None and len(result) == 1:
         return result[0].entry_dn
 
     return None
