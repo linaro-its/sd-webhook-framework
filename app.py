@@ -167,28 +167,31 @@ def initialise_handler():
         if dir_path not in sys.path:
             sys.path.insert(0, dir_path)
         if os.path.exists("%s/%s.py" % (dir_path, filename)):
-            print("Importing '%s/%s.py'" % (dir_path, filename),
-                  file=sys.stderr)
-            handler = importlib.import_module(filename)
-            # Make sure that the handler has a CAPABILITIES block
-            try:
-                _ = handler.CAPABILITIES
-                return handler
-            except Exception:
-                print(
-                    "Handler is missing CAPABILITIES definition",
-                    file=sys.stderr)
-                return None
+            return import_handler(dir_path, filename)
         print(
             "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
             file=sys.stderr)
-
+        return None
+    
     print(
         "Called to handle %s but no handler found." % reqtype,
         file=sys.stderr)
-    #
-    # No handler for this request type.
     return None
+
+
+def import_handler(dir_path, filename):
+    print("Importing '%s/%s.py'" % (dir_path, filename),
+            file=sys.stderr)
+    handler = importlib.import_module(filename)
+    # Make sure that the handler has a CAPABILITIES block
+    try:
+        _ = handler.CAPABILITIES
+    except Exception:
+        print(
+            "Handler is missing CAPABILITIES definition",
+            file=sys.stderr)
+        handler = None
+    return handler
 
 
 def initialise():
