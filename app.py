@@ -55,9 +55,8 @@ def create():
     handler = initialise()
     if handler is not None and "CREATE" in handler.CAPABILITIES:
         try:
-            if handler.SAVE_TICKET_DATA:
-                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
             print("Calling create handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            save_ticket_data(handler)
             handler.create(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -75,9 +74,8 @@ def comment():
             "COMMENT" in handler.CAPABILITIES and
             not shared_sd.automation_triggered_comment(shared.globals.TICKET_DATA)):
         try:
-            if handler.SAVE_TICKET_DATA:
-                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
             print("Calling comment handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            save_ticket_data(handler)
             handler.comment(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(
@@ -101,10 +99,9 @@ def jira_hook():
         status_result, status_from, status_to = shared_sd.\
             trigger_is_transition(shared.globals.TICKET_DATA)
         try:
-            if (handler.SAVE_TICKET_DATA and
-                    (("TRANSITION" in handler.CAPABILITIES and status_result) or
-                     ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result))):
-                shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
+            if (("TRANSITION" in handler.CAPABILITIES and status_result) or
+                     ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result)):
+                save_ticket_data(handler)
             if "TRANSITION" in handler.CAPABILITIES and status_result:
                 print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
@@ -117,6 +114,17 @@ def jira_hook():
                 False
             )
     return ""
+
+
+def save_ticket_data(handler):
+    save_data = False
+    try:
+        save_data = handler.SAVE_TICKET_DATA
+    except Exception:
+        pass
+
+    if save_data:
+        shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
 
 
 def handler_filename(dir_path, reqtype):
