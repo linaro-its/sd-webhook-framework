@@ -580,9 +580,11 @@ def find_group(name, attributes):
             result = []
         if len(result) != 1:
             return (name, result)
-        mail_entry = result[0].mail.value
-        if mail_entry is not None:
-            name = mail_entry
+        # A group may have more than one email address. Using "values"
+        # always ensures we get a list back, making [0] safe.
+        mail_entry = result[0].mail.values
+        if mail_entry != []:
+            name = mail_entry[0]
 
     # Now get the values for the specified attributes for
     # this group.
