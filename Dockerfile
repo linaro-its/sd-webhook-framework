@@ -17,7 +17,7 @@ RUN pip install git+https://github.com/linaro-its/vault_auth.git
 
 WORKDIR /app
 COPY . /app
-RUN chown -R www-data:www-data /app
+RUN chown -R www-data:www-data /app /var/www
 
 # Validate the configuration file
 RUN python3 /app/validate_config.py
