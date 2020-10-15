@@ -13,7 +13,9 @@ services:
   sd_webhook:
     build: .
     image: sd-webhook
+    container_name: sd_webhook
     ports:
+      - "5000:5000"
       - "8000:8000"
     restart: always
     networks:
