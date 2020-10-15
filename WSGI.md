@@ -8,9 +8,17 @@ Running `sudo docker-compose up` will start the container (building it first if 
 
 To have the framework running in the background, use `sudo docker-compose up -d`.
 
+## Debugging
+
+VS Code has excellent support for debugging code running inside containers and this is the recommended tool. However, WSGI is automatically started when using the container approach, which can make debugging tricky. To avoid that complexity, it is suggested that VS Code is used to run the framework as a Flask application, which listens on a different port (5000) by default, allowing it to be run at the same time. All that needs to change is the webhook endpoint in Service Desk/Jira and then restart Service Desk because it "holds onto" the old endpoint details.
+
+If the container is running on a separate computer, see <https://code.visualstudio.com/docs/remote/containers-advanced#_developing-inside-a-container-on-a-remote-docker-host>. After configuring VS Code appropriately, it will be possible to connect to the running container and then, from there, launch the Flask debugging process.
+
 ## Notes
 
 * The expectation is that this is all running on the same server as Service Desk and therefore Service Desk/Jira can use `http://localhost:8000`. If that isn't the case, there will be a need to use a web server like Apache or nginx to proxy to the container since it is likely that SSL would be required to encrypt communications between Service Desk and the framework.
+
+  * The exception is if Service Desk is being run in a container, in which case the application can use `http://sd_webhook:8000` as the URL.
 
 * If any of the handlers need to send email (rather than post comments to the issue), there is shared code to simplify this but some additional work is required:
 
