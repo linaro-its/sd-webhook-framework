@@ -180,7 +180,7 @@ def initialise_handler():
 
 
 def import_handler(dir_path, filename):
-    print("Importing '%s/%s.py'" % (dir_path, filename),
+    print("Loading '%s/%s.py' as handler for %s" % (dir_path, filename, shared.globals.TICKET),
             file=sys.stderr)
     handler = importlib.import_module(filename)
     # Make sure that the handler has a CAPABILITIES block
