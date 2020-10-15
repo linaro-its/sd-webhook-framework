@@ -2,7 +2,8 @@
 .pytest_cache
 .scannerwork
 .venv
-.vscode
+.vscode/*
+!.vscode/launch.json
 __pycache__
 *.pyc
 cf_cachefile
