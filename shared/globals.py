@@ -4,9 +4,9 @@ import json
 import os
 import sys
 
-import vault_auth
 from json_minify import json_minify
 from requests.auth import HTTPBasicAuth
+import shared.shared_vault as shared_vault
 
 CONFIGURATION = None
 
@@ -147,12 +147,7 @@ def get_google_credentials():
     """ Retrieve the Google JSON blob """
     global CONFIGURATION
     if "google_json_file" not in CONFIGURATION:
-        secret = vault_auth.get_secret(
-            CONFIGURATION["vault_google_name"],
-            iam_role=CONFIGURATION["vault_iam_role"],
-            url=CONFIGURATION["vault_server_url"]
-        )
-        return json.loads(secret["data"]["pw"])
+        return json.loads(shared_vault.get_secret(CONFIGURATION["vault_google_name"]))
     return json.load(open(CONFIGURATION["google_json_file"]))
 
 
@@ -160,30 +155,16 @@ def get_ldap_credentials():
     """ Retrieve the credentials required by the LDAP code """
     global CONFIGURATION
     if "ldap_password" not in CONFIGURATION:
-        secret = vault_auth.get_secret(
-            CONFIGURATION["vault_ldap_name"],
-            iam_role=CONFIGURATION["vault_iam_role"],
-            url=CONFIGURATION["vault_server_url"]
-        )
-        # This assumes that the password will be stored in the "pw" key.
-        return CONFIGURATION["ldap_user"], secret["data"]["pw"]
-    return CONFIGURATION["ldap_user"],\
-        CONFIGURATION["ldap_password"]
+        return CONFIGURATION["ldap_user"], shared_vault.get_secret(CONFIGURATION["vault_ldap_name"])
+    return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
 
 
 def get_sd_credentials():
     """ Retrieve the credentials required by SD_AUTH """
     global CONFIGURATION
     if "bot_password" not in CONFIGURATION:
-        secret = vault_auth.get_secret(
-            CONFIGURATION["vault_bot_name"],
-            iam_role=CONFIGURATION["vault_iam_role"],
-            url=CONFIGURATION["vault_server_url"]
-        )
-        # This assumes that the password will be stored in the "pw" key.
-        return CONFIGURATION["bot_name"], secret["data"]["pw"]
-    return CONFIGURATION["bot_name"],\
-        CONFIGURATION["bot_password"]
+        return CONFIGURATION["bot_name"], shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
+    return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
 
 
 def get_email_credentials():
@@ -194,13 +175,7 @@ def get_email_credentials():
     # We already known (from validate_auth_config) that we can only have
     # either password or vault settings so act accordingly.
     if "vault_mail_name" in CONFIGURATION:
-        secret = vault_auth.get_secret(
-            CONFIGURATION["vault_mail_name"],
-            iam_role=CONFIGURATION["vault_iam_role"],
-            url=CONFIGURATION["vault_server_url"]
-        )
-        # This assumes that the password will be stored in the "pw" key.
-        return CONFIGURATION["mail_user"], secret["data"]["pw"]
+        return CONFIGURATION["mail_user"], shared_vault.get_secret(CONFIGURATION["vault_mail_name"])
     return CONFIGURATION["mail_user"], CONFIGURATION["mail_password"]
 
 
