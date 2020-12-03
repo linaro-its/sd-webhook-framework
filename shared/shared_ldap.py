@@ -677,3 +677,13 @@ def find_single_object_from_email(email_address):
         return result[0].entry_dn
 
     return None
+
+
+def get_manager_from_dn(dn):
+    # Get the manager DN from the staff DN
+    result = get_object(dn, ["manager"])
+    if result.manager.value is not None:
+        mgr_email = get_object(result.manager.value, ["mail"])
+        if mgr_email.mail.values != []:
+            return mgr_email.mail.values[0]
+    return None
