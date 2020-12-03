@@ -13,6 +13,7 @@ vault_auth can be found at https://github.com/linaro-its/vault_auth
 
 
 import json
+import urllib
 from datetime import datetime
 
 import requests
@@ -94,6 +95,11 @@ def save_text_as_attachment(filename, content, comment, public):
         return result.status_code
     # Indicate we couldn't find the project for this ticket ... which shouldn't happen!
     return -1
+
+
+def ticket_issue_type(ticket_data):
+    """ Return the issue type for the provided ticket data. """
+    return ticket_data["issue"]["fields"]["issuetype"]["name"]
 
 
 def ticket_request_type(ticket_data):
@@ -210,6 +216,33 @@ def get_reporter_field(ticket_data, field_name):
 def reporter_email_address(ticket_data):
     """ Get the reporter's email address from the ticket data. """
     return get_reporter_field(ticket_data, "emailAddress")
+
+
+def get_group_members(group_name):
+    """ Get the members of the specified group. """
+    enc_group_name = urllib.parse.quote(group_name)
+    query_url = "%s/rest/api/2/group/member?groupname=%s" % (
+        shared.globals.ROOT_URL, enc_group_name)
+    result = service_desk_request_get(query_url)
+    index = 0
+    members = []
+    while True:
+        if result.status_code == 200:
+            unpack = result.json()
+            member_list = unpack["values"]
+            for member in member_list:
+                members.append(member["name"])
+            # Do we need to fetch the next block?
+            if unpack["isLast"]:
+                break
+            index += unpack["maxResults"]
+            result = service_desk_request_get("%s&startAt=%s" % (
+                    query_url, index))
+            # and loop ...
+        else:
+            print("get_group_members(%s) failed with error code %s" % (group_name, result.status_code))
+            break
+    return members    
 
 
 def groups_for_user(email_address):
