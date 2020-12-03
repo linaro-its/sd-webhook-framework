@@ -625,6 +625,10 @@ def reporter_is_group_owner(owner_list):
 
 def flatten_list(starting_list):
     """ Expand groups to individuals to end up with a single list of names. """
+    enabled = shared.globals.config("ldap_enabled")
+    if enabled is None or not enabled:
+        return starting_list
+
     result = []
     for item in starting_list:
         if item != "":
