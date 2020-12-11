@@ -85,6 +85,23 @@ def comment():
     return ""
 
 
+@APP.route('/org-change', methods=['POST'])
+def org_change():
+    """ Triggered when the organizations change for a ticket. """
+    handler = initialise()
+    if handler is not None and "ORGCHANGE" in handler.CAPABILITIES:
+        try:
+            print("Calling org change handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            save_ticket_data(handler)
+            handler.org_change(shared.globals.TICKET_DATA)
+        except Exception:  # pylint: disable=broad-except
+            shared_sd.post_comment(
+                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
+                False
+            )
+    return ""
+
+
 @APP.route('/jira-hook', methods=['POST'])
 def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
