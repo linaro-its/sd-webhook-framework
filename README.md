@@ -9,7 +9,6 @@
 - [Development](#development)
   - [Code contributions](#code-contributions)
 
-
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_sd-webhook-framework&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_sd-webhook-framework)
 
 ## Introduction
@@ -20,12 +19,13 @@ This repository provides a foundation for supporting webhook automation with Atl
 
 The framework can be triggered by the following actions:
 
-* Creation of a ticket (`CREATE`)
-* Comment added to a ticket (`COMMENT`)
-* Status change on a ticket (`TRANSITION`)
-* Assignment change on a ticket (`ASSIGNMENT`)
+- Creation of a ticket (`CREATE`)
+- Comment added to a ticket (`COMMENT`)
+- Organization change on a ticket (`ORGCHANGE`)
+- Status change on a ticket (`TRANSITION`)
+- Assignment change on a ticket (`ASSIGNMENT`)
 
-The first two actions are triggered by Service Desk webhooks. The last two actions are triggered by a Jira webhook.
+The first three actions are triggered by Service Desk webhooks. The last two actions are triggered by a Jira webhook.
 
 Each *request type* has its own code file. The main code loads the code file appropriate to the ticket being handled.
 
@@ -49,22 +49,32 @@ In the text below, `<base URL>` is the URL that is mapped onto the framework web
 
 ### Service Desk webhook
 
-The Service Desk webhook is created through the Automation rules for a given SD project. Generally, two rules are required:
+The Service Desk webhook is created through the Automation rules for a given SD project. Generally, the following rules should be configured, depending on the needs of the handlers:
 
-* When: Issue created
-  * Then: Webhook
-  * URL: `<base URL>`/create
-  * Include payload in request body
-* When: Comment added
-  * Then: Webhook
-  * URL: `<base URL>`/comment
-  * Include payload in request body
+- When: Issue created
+  - Then: Webhook
+  - URL: `<base URL>`/create
+  - Include payload in request body
+  
+- When: Comment added
+  - Then: Webhook
+  - URL: `<base URL>`/comment
+  - Include payload in request body
+
+- When: Organizations added to issue
+  - Then: Webhook
+  - URL: `<base URL>`/org-change
+  - Include payload in request body
 
 You can use the `IF` clause to only fire when request types matching those supported by the webhook are affected. This is done by adding an `Issue matches` clause with JQL like this:
 
     "Customer Request Type" = "Name of the request type"
 
-Note that if you change the name of the request type, you **must** update the JQL clause to match otherwise it will not fire. The clause does not get updated automatically.
+or
+
+    Issue matches status = "Open"
+
+Note that if you change the name of the request type, you **must** update any JQL clauses that reference it to match otherwise it will not fire. The clause does not get updated automatically.
 
 Note that the framework will work out which request type has been used, so it is safe to omit the `IF` clause, with the understanding that the framework will be called for *all* issues created and commented on.
 
@@ -72,8 +82,8 @@ Note that the framework will work out which request type has been used, so it is
 
 Create a WebHook in Jira with the following settings:
 
-* URL: `<base URL>`/jira-hook
-* Events: Issue>updated
+- URL: `<base URL>`/jira-hook
+- Events: Issue>updated
 
 The framework looks at the data sent by Jira and determines if it was an assignment or transition that triggered the event and acts accordingly. Note that a Jira webhook is used for transitions rather than the Service Desk "Status changed" event because it is then possible to track the before and after states.
 
