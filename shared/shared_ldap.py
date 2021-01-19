@@ -96,17 +96,22 @@ def search_filter(ldap_conn, ldap_filter, filter_param):
     )
 
 
+def find_from_attribute(attribute, value):
+    """
+    Try to find a LDAP object where the specified attribute has the
+    specified value.
+    """
+    with get_ldap_connection() as conn:
+        if search_filter(conn, attribute, value):
+            return conn.entries[0].entry_dn
+    return None
+
+
 def find_from_email(email_address):
     """
     Try to find an LDAP object from the email address provided.
     """
-    # Use the naming contexts from the server as the base for the search.
-    # with get_ldap_connection() as conn:
-    with get_ldap_connection() as conn:
-        for ldap_filter in ("mail", "passwordSelfResetBackupMail"):
-            if search_filter(conn, ldap_filter, email_address):
-                return conn.entries[0].entry_dn
-    return None
+    return find_from_attribute("mail", email_address)
 
 
 def calculate_uid(firstname, lastname):
