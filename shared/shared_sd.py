@@ -117,7 +117,7 @@ def save_text_as_attachment(filename, content, comment, public):
 
 def ticket_issue_type(ticket_data):
     """ Return the issue type for the provided ticket data. """
-    return ticket_data["issue"]["fields"]["issuetype"]["name"]
+    return ticket_data["fields"]["issuetype"]["name"]
 
 
 def ticket_request_type(ticket_data):
@@ -125,16 +125,18 @@ def ticket_request_type(ticket_data):
     # The request type is stored in the Customer Request Type CF.
     crt_cf = custom_fields.get("Customer Request Type")
     if crt_cf is None:
+        crt_cf = custom_fields.get("Request Type")
+    if crt_cf is None:
         raise CustomFieldLookupFailure(
-            "Failed to find 'Customer Request Type'")
-    cf_name = "customfield_%s" % crt_cf
-    if cf_name not in ticket_data["issue"]["fields"]:
+            "Failed to find the request type information")
+    # cf_name = "customfield_%s" % crt_cf
+    if crt_cf not in ticket_data["fields"]:
         raise MalformedIssueError(
-            "Failed to find '%s' in issue fields" % cf_name)
-    if ticket_data["issue"]["fields"][cf_name] is None:
+            "Failed to find '%s' in issue fields" % crt_cf)
+    if ticket_data["fields"][crt_cf] is None:
         # Probably a Jira issue not a SD issue
         return None
-    return ticket_data["issue"]["fields"][cf_name]["requestType"]["id"]
+    return ticket_data["fields"][crt_cf]["requestType"]["id"]
 
 
 def save_ticket_data_as_attachment(ticket_data):
@@ -156,12 +158,17 @@ def save_ticket_data_as_attachment(ticket_data):
 
 def automation_triggered_comment(ticket_data):
     """ Try to determine if we (the automation) triggered the last comment. """
-    if ("comment" in ticket_data and
-            "author" in ticket_data["comment"] and
-            "name" in ticket_data["comment"]["author"] and
-            ticket_data["comment"]["author"][
+    comments = None
+    if "comment" in ticket_data:
+        comments = ticket_data["comment"]
+    elif "comment" in ticket_data["fields"]:
+        comments = ticket_data["fields"]["comment"]
+    if comments is not None:
+        last_comment = comments[-1]
+        if ("author" in last_comment and "name" in last_comment["author"] and
+            last_comment["comment"]["author"][
                 "name"] == shared.globals.CONFIGURATION["bot_name"]):
-        return True
+            return True
     return False
 
 
@@ -214,20 +221,18 @@ def usable_ticket_data(ticket_data):
 def get_field(ticket_data, field_id):
     """ Return the required custom field if it is in the data. """
     field_name = "customfield_%s" % field_id
-    if ("issue" in ticket_data and
-            "fields" in ticket_data["issue"] and
-            field_name in ticket_data["issue"]["fields"]):
-        return ticket_data["issue"]["fields"][field_name]
+    if ("fields" in ticket_data and
+            field_name in ticket_data["fields"]):
+        return ticket_data["fields"][field_name]
     return None
 
 
 def get_reporter_field(ticket_data, field_name):
     """ Generalised function to get a field back for the reporter. """
-    if ("issue" in ticket_data and
-            "fields" in ticket_data["issue"] and
-            "reporter" in ticket_data["issue"]["fields"] and
-            field_name in ticket_data["issue"]["fields"]["reporter"]):
-        return ticket_data["issue"]["fields"]["reporter"][field_name]
+    if ("fields" in ticket_data and
+            "reporter" in ticket_data["fields"] and
+            field_name in ticket_data["fields"]["reporter"]):
+        return ticket_data["fields"]["reporter"][field_name]
     return None
 
 
@@ -530,7 +535,7 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
     if last_comment["author"]["name"] == shared.globals.CONFIGURATION["bot_name"]:
         return
 
-    assignee = shared.globals.TICKET_DATA["issue"]["fields"]["assignee"]
+    assignee = shared.globals.TICKET_DATA["fields"]["assignee"]
     if assignee is not None and assignee["name"] == shared.globals.CONFIGURATION["bot_name"]:
         assign_issue_to(None)
         if transition_to is not None:
@@ -560,7 +565,7 @@ def assign_approvers(approver_list, cf):
                 if not is_request_participant(item_email):
                     add_request_participant(item_email)
     result = service_desk_request_put(
-        shared.globals.TICKET_DATA["issue"]["self"],
+        shared.globals.TICKET_DATA["self"],
         json.dumps(approvers))
     if result.status_code != 204:
         post_comment(
@@ -575,7 +580,7 @@ def set_summary(summary):
     service_desk_request_put("%s/rest/api/2/issue/%s" % (
         shared.globals.ROOT_URL, shared.globals.TICKET), data)
     # Update our copy of the ticket data to reflect the new summary
-    shared.globals.TICKET_DATA["issue"]["fields"]["summary"] = summary
+    shared.globals.TICKET_DATA["fields"]["summary"] = summary
 
 
 def add_request_participant(email_address):

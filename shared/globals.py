@@ -50,28 +50,31 @@ def initialise_ticket_data(ticket_data):
 
 def initialise_shared_sd():
     """ Initialise the code. """
-    global ROOT_URL, TICKET, PROJECT, REPORTER
-    # Get the ticket details from the data and save it
-    if TICKET_DATA is None or "issue" not in TICKET_DATA:
-        raise MalformedIssueError("Missing 'issue' in data")
-    if "self" not in TICKET_DATA["issue"]:
+    global ROOT_URL, TICKET, TICKET_DATA, PROJECT, REPORTER
+    # Get the ticket details from the data and save it.
+    if TICKET_DATA is None:
+        raise MalformedIssueError("No data provided")
+    # There is a difference between the structure used by Server and Cloud.
+    if "issue" in TICKET_DATA:
+        TICKET_DATA = TICKET_DATA["issue"]
+    if "self" not in TICKET_DATA:
         raise MalformedIssueError("Missing 'self' in issue")
-    if "key" not in TICKET_DATA["issue"]:
+    if "key" not in TICKET_DATA:
         raise MalformedIssueError("Missing 'key' in issue")
-    if "fields" not in TICKET_DATA["issue"]:
+    if "fields" not in TICKET_DATA:
         raise MalformedIssueError("Missing 'fields' in issue")
-    if "project" not in TICKET_DATA["issue"]["fields"]:
+    if "project" not in TICKET_DATA["fields"]:
         raise MalformedIssueError("Missing 'project' in fields")
-    if "key" not in TICKET_DATA["issue"]["fields"]["project"]:
+    if "key" not in TICKET_DATA["fields"]["project"]:
         raise MalformedIssueError("Missing 'key' in project")
-    if ("reporter" not in TICKET_DATA["issue"]["fields"] or
-        "emailAddress" not in TICKET_DATA["issue"]["fields"]["reporter"]):
+    if ("reporter" not in TICKET_DATA["fields"] or
+        "emailAddress" not in TICKET_DATA["fields"]["reporter"]):
         raise MalformedIssueError("Missing reporter details in project")
-    issue_url = TICKET_DATA["issue"]["self"].split("/", 3)
+    issue_url = TICKET_DATA["self"].split("/", 3)
     ROOT_URL = "%s//%s" % (issue_url[0], issue_url[2])
-    TICKET = TICKET_DATA["issue"]["key"]
-    PROJECT = TICKET_DATA["issue"]["fields"]["project"]["key"]
-    REPORTER = TICKET_DATA["issue"]["fields"]["reporter"]["emailAddress"]
+    TICKET = TICKET_DATA["key"]
+    PROJECT = TICKET_DATA["fields"]["project"]["key"]
+    REPORTER = TICKET_DATA["fields"]["reporter"]["emailAddress"]
 
 
 def validate_cf_config():
