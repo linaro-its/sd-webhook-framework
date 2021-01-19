@@ -38,6 +38,9 @@ class MissingCFConfig(SharedGlobalsError):
 class InvalidCFConfig(SharedGlobalsError):
     """ The CF config is invalid. """
 
+class MalformedJSON(SharedGlobalsError):
+    """ The configuration file is not valid JSON. """
+
 def initialise_ticket_data(ticket_data):
     """ Initialise the ticket data global. """
     global TICKET_DATA
@@ -143,7 +146,7 @@ def initialise_config():
         with open(config_file) as handle:
             CONFIGURATION = json.loads(json_minify(handle.read()))
     except json.decoder.JSONDecodeError:
-        raise MissingCFConfig("Unable to decode configuration file successfully")
+        raise MalformedJSON("Unable to decode configuration file successfully")
     validate_cf_config()
     validate_auth_config()
 
