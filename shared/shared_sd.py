@@ -33,27 +33,41 @@ class CustomFieldLookupFailure(SharedSDError):
     """ Custom field lookup failure exception. """
 
 
-def get_servicedesk_id(sd_project_key):
-    """ Return the Service Desk ID for a given project key. """
+def get_servicedesk_projects():
+    """ Return all Service Desk projects. """
     result = service_desk_request_get(
         "%s/rest/servicedeskapi/servicedesk" % shared.globals.ROOT_URL)
     if result.status_code == 200:
-        unpack = result.json()
-        values = unpack["values"]
+        return result.json()
+    return None
+
+
+def get_servicedesk_id(sd_project_key):
+    """ Return the Service Desk ID for a given project key. """
+    projects = get_servicedesk_projects()
+    if projects is not None:
+        values = projects["values"]
         for value in values:
             if value["projectKey"] == sd_project_key:
                 return value["id"]
     return -1
 
 
-def get_request_type_id(name, sdid):
-    """ Return the ID for the specified request type in the specified project. """
+def get_servicedesk_request_types(project_id):
+    """ Return all of the request types for a given Service Desk project. """
     result = service_desk_request_get(
         "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
-            shared.globals.ROOT_URL, sdid))
+            shared.globals.ROOT_URL, project_id))
     if result.status_code == 200:
-        json_content = result.json()
-        for value in json_content["values"]:
+        return result.json()
+    return None
+
+
+def get_request_type_id(name, sdid):
+    """ Return the ID for the specified request type in the specified project. """
+    request_types = get_servicedesk_request_types(sdid)
+    if request_types is not None:
+        for value in request_types["values"]:
             if value["name"] == name:
                 return value["id"]
     return -1
