@@ -28,11 +28,10 @@
     // that is included in the repo.
     // "cf_cachefile": "~/cf_cachefile.json",
     //
-    // If the Custom Field Editor plugin is installed, do you want to use it?
-    "cf_use_plugin_api": false,
+    // Use the Server REST API to retrieve custom fields?
+    "cf_use_server_api": false,
     //
-    // This has to be False at the moment. Code to support getting CF IDs from
-    // Jira Cloud has not yet been implemented.
+    // Use the Cloud REST API to retrieve custom fields?
     "cf_use_cloud_api": false,
 
     // VAULT AUTHENTICATION
