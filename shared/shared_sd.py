@@ -75,14 +75,18 @@ def get_request_type_id(name, sdid):
 
 def save_text_as_attachment(filename, content, comment, public):
     """Save the specified text as a file on the current ticket."""
-    headers = {'X-Atlassian-Token': 'no-check', 'X-ExperimentalApi': 'true'}
+    headers = {
+        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
+        'X-Atlassian-Token': 'no-check',
+        'X-ExperimentalApi': 'true'
+    }
     files = {'file': (filename, content, 'text/plain')}
     sd_id = get_servicedesk_id(shared.globals.PROJECT)
     if sd_id != -1:
         result = requests.post(
             "%s/rest/servicedeskapi/servicedesk/%s/attachTemporaryFile" % (
                 shared.globals.ROOT_URL, sd_id),
-            headers=headers, files=files, auth=shared.globals.SD_AUTH)
+            headers=headers, files=files)
         if result.status_code == 201:
             json_result = result.json()
             create = {
@@ -632,17 +636,29 @@ def get_request_participants():
 
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
-    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
+    headers = {
+        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
+        'content-type': 'application/json',
+        'X-ExperimentalApi': 'true'
+    }
+    return requests.get(url, headers=headers)
 
 
 def service_desk_request_post(url, data):
     """Centralised routine to POST to Service Desk."""
-    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.post(url, headers=headers, auth=shared.globals.SD_AUTH, data=data)
+    headers = {
+        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
+        'content-type': 'application/json',
+        'X-ExperimentalApi': 'true'
+    }
+    return requests.post(url, headers=headers, data=data)
 
 
 def service_desk_request_put(url, data):
     """Centralised routine to PUT to Service Desk."""
-    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.put(url, headers=headers, auth=shared.globals.SD_AUTH, data=data)
+    headers = {
+        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
+        'content-type': 'application/json',
+        'X-ExperimentalApi': 'true'
+    }
+    return requests.put(url, headers=headers, data=data)

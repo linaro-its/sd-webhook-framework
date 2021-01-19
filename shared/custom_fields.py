@@ -40,8 +40,12 @@ def initialise_cf_cache():
 
 def service_desk_request_get(url):
     """Centralised routine to GET from Service Desk."""
-    headers = {'content-type': 'application/json', 'X-ExperimentalApi': 'true'}
-    return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
+    headers = {
+        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
+        'content-type': 'application/json',
+        'X-ExperimentalApi': 'true'
+    }
+    return requests.get(url, headers=headers)
 
 
 def get_customfield_id_from_server(field_name):

@@ -1,11 +1,12 @@
 """ Manages and initialises globals used across the code. """
 
+import base64
 import json
 import os
 import sys
 
 from json_minify import json_minify
-from requests.auth import HTTPBasicAuth
+
 import shared.shared_vault as shared_vault
 
 CONFIGURATION = None
@@ -191,7 +192,12 @@ def initialise_sd_auth():
     """ Initialise the SD_AUTH global. """
     global SD_AUTH
     name, password = get_sd_credentials()
-    SD_AUTH = HTTPBasicAuth(name, password)
+    # Construct a string of the form username:password
+    combo = "%s:%s" % (name, password)
+    # Encode it to Base64
+    combo_bytes = combo.encode('ascii')
+    base64_bytes = base64.b64encode(combo_bytes)
+    SD_AUTH = base64_bytes.decode('ascii')
 
 
 def config(key):
