@@ -35,6 +35,9 @@ class OverlappingCredentials(SharedGlobalsError):
 class MissingCFConfig(SharedGlobalsError):
     """ Some part of the CF config is missing. """
 
+class InvalidCFConfig(SharedGlobalsError):
+    """ The CF config is invalid. """
+
 def initialise_ticket_data(ticket_data):
     """ Initialise the ticket data global. """
     global TICKET_DATA
@@ -69,10 +72,12 @@ def initialise_shared_sd():
 
 def validate_cf_config():
     """ Raise exceptions if the configuration has problems. """
-    if "cf_use_plugin_api" not in CONFIGURATION:
-        raise MissingCFConfig("Can't find 'cf_use_plugin_api' in config")
+    if "cf_use_server_api" not in CONFIGURATION:
+        raise MissingCFConfig("Can't find 'cf_use_server_api' in config")
     if "cf_use_cloud_api" not in CONFIGURATION:
         raise MissingCFConfig("Can't find 'cf_use_cloud_api' in config")
+    if CONFIGURATION["cf_use_server_api"] and CONFIGURATION["cf_use_cloud_api"]:
+        raise InvalidCFConfig("Cannot use both server API and cloud API")
     if "cf_cachefile" not in CONFIGURATION:
         # Default to using the cache file in the repo.
         basedir = os.path.dirname(os.path.dirname(__file__))
