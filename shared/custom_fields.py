@@ -6,21 +6,14 @@ instance to instance, hence this file.
 
 Two approaches:
 1. Edit custom_fields.json to define the lookup table or
-2. Install the free Customfield Editor Plugin which provides a REST API for
-   the code to use to retrieve the mapping. However, this is only available
-   for self-hosted server installations.
-   https://marketplace.atlassian.com/apps/1212096/customfield-editor-plugin
+2. Use the Server or Cloud REST API to find the custom field with the
+   required name.
 
-Note that the plugin requires credentials that have Jira admin rights in
-order to be able to enumerate all of the custom fields on the system.
+For option 2, the cache file is updated since it avoids a round-trip to the
+server.
 
-It looks like there is an API to support field retrieval in Cloud:
-https://developer.atlassian.com/cloud/jira/platform/rest/#api/2/field
-Need to get an account and expand this code ...
-
-If the plugin is used, the file is still updated as a cache since it avoids
-a round-trip to the server and the overhead of converting the answer into
-the dictionary we want.
+The configured Service Desk account must have sufficient permissions to use
+the REST APIs if they are enabled.
 """
 
 import os
@@ -51,50 +44,55 @@ def service_desk_request_get(url):
     return requests.get(url, headers=headers, auth=shared.globals.SD_AUTH)
 
 
-def get_customfield_id_from_plugin(field_name):
-    """ Using the CF Editor plugin, return the ID for a given CF name. """
+def get_customfield_id_from_server(field_name):
+    """ Use the Server REST API to find the ID for a given CF name. """
+    start_at = 1
+    is_last = False
+    while not is_last:
+        result = service_desk_request_get(
+            "%s/rest/api/2/customFields?startAt=%s" % (shared.globals.ROOT_URL, start_at))
+        data = result.json()
+        for field in data["values"]:
+            if field["name"] == field_name:
+                return field["id"]
+        is_last = data["isLast"]
+        start_at += 1
+    return None
+
+
+def get_customfield_id_from_cloud(field_name):
+    """ Use the Cloud REST API to find the ID for a given CF name. """
     result = service_desk_request_get(
-        "%s/rest/jiracustomfieldeditorplugin/1/admin/customfields" % shared.globals.ROOT_URL
-    )
-    if result.status_code == 200:
-        fields = result.json()
-        for field in fields:
-            if field["fieldName"] == field_name:
-                return field["fieldId"]
-    else:
-        print("Got status %s when requesting custom field %s" % (
-            result.status_code, field_name))
-        # Try to get the human readable error message
-        fields = result.json()
-        if "message" in fields:
-            print(fields["message"])
+        "%s/rest/api/3/field" % shared.globals.ROOT_URL)
+    data = result.json()
+    for field in data:
+        if field["name"] == field_name:
+            return field["id"]
     return None
 
 
 def fetch_cf_value(name):
     """ If the specified name is not in the cache, look it up to get the ID. """
-    if name not in CF_CACHE:
-        # Are we using the REST API?
-        if shared.globals.CONFIGURATION["cf_use_plugin_api"]:
-            # Fetch the custom field from the plugin
-            value = get_customfield_id_from_plugin(name)
-            # Only save it away if it is a value
-            if value is not None:
-                CF_CACHE[name] = value
-                # And resave to file
-                with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
-                    json.dump(CF_CACHE, handle)
-        elif shared.globals.CONFIGURATION["cf_use_cloud_api"]:
-            # pylint: disable=fixme
-            # TODO: extend for Cloud API
-            raise NotImplementedError
+    value = None
+    # Are we using the REST API?
+    if shared.globals.CONFIGURATION["cf_use_server_api"]:
+        value = get_customfield_id_from_server(name)
+    elif shared.globals.CONFIGURATION["cf_use_cloud_api"]:
+        value = get_customfield_id_from_cloud(name)
+    # Only save it away if it is a value
+    if value is not None:
+        CF_CACHE[name] = value
+        # And resave to file
+        with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
+            json.dump(CF_CACHE, handle)
 
 
 def get(name):
     """ Get the ID for the given custom field name. """
     global CF_CACHE  # pylint: disable=global-statement
     initialise_cf_cache()
-    fetch_cf_value(name)
+    if name not in CF_CACHE:
+        fetch_cf_value(name)
     if name in CF_CACHE:
         return CF_CACHE[name]
     return None
