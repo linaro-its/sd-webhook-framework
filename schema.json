@@ -106,8 +106,10 @@
     },
     "required": [
         "handlers",
-        "cf_use_plugin_api",
+        "cf_use_server_api",
+        "cf_use_cloud_api",
         "bot_name",
+        "google_enabled",
         "ldap_enabled",
         "final_entry"
     ]
