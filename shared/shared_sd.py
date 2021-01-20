@@ -162,13 +162,15 @@ def automation_triggered_comment(ticket_data):
     if "comment" in ticket_data:
         comments = ticket_data["comment"]
     elif "comment" in ticket_data["fields"]:
-        comments = ticket_data["fields"]["comment"]
+        comments = ticket_data["fields"]["comment"]["comments"]
     if comments is not None:
         last_comment = comments[-1]
-        if ("author" in last_comment and "name" in last_comment["author"] and
-            last_comment["comment"]["author"][
-                "name"] == shared.globals.CONFIGURATION["bot_name"]):
-            return True
+        last_author = get_user_field(last_comment["author"], "name")
+        if last_author is None:
+            print("Unable to retrieve author of last comment")
+            print(json.dumps(ticket_data))
+            return False
+        return (last_author == shared.globals.CONFIGURATION["bot_name"])
     return False
 
 
@@ -227,12 +229,33 @@ def get_field(ticket_data, field_id):
     return None
 
 
+def get_user_field(user_blob, field_name):
+    """
+    Get the specified field back from the user blob data. Cloud
+    doesn't populate a lot of this data, though, meaning we then
+    have to query the self URL to get it.
+    """
+    if field_name not in user_blob:
+        return None
+    value = user_blob[field_name]
+    if value is not None:
+        return value
+    result = service_desk_request_get(user_blob["self"])
+    if result.status_code != 200:
+        print("Got status %s when querying %s for user field %s" % (
+            result.status_code, user_blob["self"], field_name))
+        return None
+    data = result.json
+    if field_name in data:
+        return data["field_name"]
+    return None
+
+
 def get_reporter_field(ticket_data, field_name):
     """ Generalised function to get a field back for the reporter. """
     if ("fields" in ticket_data and
-            "reporter" in ticket_data["fields"] and
-            field_name in ticket_data["fields"]["reporter"]):
-        return ticket_data["fields"]["reporter"][field_name]
+            "reporter" in ticket_data["fields"]):
+        return get_user_field(ticket_data["fields"]["reporter"], field_name)
     return None
 
 
@@ -532,11 +555,11 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
     if get_current_status() == "Needs approval":
         return
 
-    if last_comment["author"]["name"] == shared.globals.CONFIGURATION["bot_name"]:
+    if get_user_field(last_comment["author"], "name") == shared.globals.CONFIGURATION["bot_name"]:
         return
 
     assignee = shared.globals.TICKET_DATA["fields"]["assignee"]
-    if assignee is not None and assignee["name"] == shared.globals.CONFIGURATION["bot_name"]:
+    if assignee is not None and get_user_field(assignee, "name") == shared.globals.CONFIGURATION["bot_name"]:
         assign_issue_to(None)
         if transition_to is not None:
             transition_request_to(transition_to)
