@@ -108,8 +108,8 @@
     //
     // Uncomment one of the following lines as appropriate. If both are left
     // commented out, attempts to send email will raise an error.
-    // "mail_mechanism": "smtp"
-    // "mail_mechanism": "ses"
+    // "mail_mechanism": "smtp",
+    // "mail_mechanism": "ses",
     //
     // SMTP CONFIGURATION
     // Note that if you are using the Docker container, you either need to
