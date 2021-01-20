@@ -68,6 +68,9 @@ def get_customfield_id_from_cloud(field_name):
     """ Use the Cloud REST API to find the ID for a given CF name. """
     result = service_desk_request_get(
         "%s/rest/api/3/field" % shared.globals.ROOT_URL)
+    if result.status_code != 200:
+        print("Unable to retrieve %s from Cloud" % field_name)
+        return None
     data = result.json()
     for field in data:
         if field["name"] == field_name:
