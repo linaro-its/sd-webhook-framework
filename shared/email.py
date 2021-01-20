@@ -22,7 +22,7 @@ class BadStartTls(SharedEmailError):
 class InvalidConfig(SharedEmailError):
     """ Configuration is invalid for operation. """
 
-def send_email(sender, recipient, subject, html_body, text_body):
+def send_email_parts(sender, recipient, subject, html_body, text_body):
     """ Send the email message in parts. """
     protocol = shared.globals.config("mail_mechanism")
     if protocol is None:
