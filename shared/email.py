@@ -2,7 +2,13 @@
 
 import smtplib
 import ssl
+from email.message import EmailMessage
+
+import boto3
+from botocore.exceptions import ClientError
+
 import shared.globals
+
 
 class SharedEmailError(Exception):
     """ Base exception class for the library. """
@@ -13,9 +19,44 @@ class MissingConfig(SharedEmailError):
 class BadStartTls(SharedEmailError):
     """ starttls failed """
 
+class InvalidConfig(SharedEmailError):
+    """ Configuration is invalid for operation. """
+
+def send_email(sender, recipient, subject, html_body, text_body):
+    """ Send the email message in parts. """
+    protocol = shared.globals.config("mail_mechanism")
+    if protocol is None:
+        raise MissingConfig("mail_mechanism has not been defined")
+    if html_body is None and text_body is None:
+        text_body = "" # Make sure we have *something* to send
+    if protocol == "smtp":
+        msg = EmailMessage()
+        msg['Subject'] = subject
+        msg['From'] = sender
+        msg['To'] = recipient
+        if text_body is None:
+            msg.set_content(html_body, subtype="html")
+        else:
+            msg.set_content(text_body)
+            if html_body is not None:
+                msg.add_alternative(html_body, subtype="html")
+        send_email_via_smtp(msg)
+    elif protocol == "ses":
+        send_email_via_ses(sender, recipient, subject, html_body, text_body)
+    else:
+        raise InvalidConfig("mail_mechanism must be smtp or ses")
 
 def send_email(msg):
     """ Send the email message. """
+    protocol = shared.globals.config("mail_mechanism")
+    if protocol is None:
+        raise MissingConfig("mail_mechanism has not been defined")
+    if protocol != "smtp":
+        raise InvalidConfig("Can only use SMTP with prepared message body")
+    send_email_via_smtp(msg)
+
+def send_email_via_smtp(msg):
+    """ Send the email via SMTP. """
     # Start by retrieving the configuration.
     server = shared.globals.config("mail_host")
     if server is None:
@@ -44,3 +85,36 @@ def send_email(msg):
         recipients,
         msg.as_string())
     session.quit()
+
+def send_email_via_ses(sender, recipient, subject, html_body, text_body):
+    """ Sent the message via AWS SES. """
+    configuration_set = shared.globals.config("ses_config_set")
+    aws_region = shared.globals.config("ses_region")
+    char_set = "UTF-8"
+    client = boto3.client('ses', region_name=aws_region)
+    message = {
+        "Body": {},
+        "Subect": {
+            "Charset": char_set,
+            "Data": subject
+        }
+    }
+    if html_body is not None:
+        message["Body"]["Html"] = {
+            "Charset": char_set,
+            "Data": html_body
+        }
+    if text_body is not None:
+        message["Body"]["Text"] = {
+            "Charset": char_set,
+            "Data": text_body
+        }
+    response = client.send_email(
+        Destination={
+            "ToAddresses": [ recipient ]
+        },
+        Message=message,
+        Source=sender,
+        ConfigurationSetName=configuration_set
+    )
+    print("Email sent via SES to %s; message ID is %s" % (recipient, response["MessageId"]))

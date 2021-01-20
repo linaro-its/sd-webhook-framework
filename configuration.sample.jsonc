@@ -101,13 +101,25 @@
 
     // EMAIL
     //
-    // The email relay host. Note that if you are using the Docker container,
-    // you either need to configure the host's MTA to listen to the Docker IP
-    // address or you need to run a separate container and network it to the
-    // framework container. Either way, you need to specify an IP address here.
+    // Two mechanisms are supported in the framework for sending email:
     //
-    // If it is commented out, attempts to send email will raise an error.
-    "mail_host": "172.17.0.1",
+    // 1. SMTP via a relay host
+    // 2. AWS SES
+    //
+    // Uncomment one of the following lines as appropriate. If both are left
+    // commented out, attempts to send email will raise an error.
+    // "mail_mechanism": "smtp"
+    // "mail_mechanism": "ses"
+    //
+    // SMTP CONFIGURATION
+    // Note that if you are using the Docker container, you either need to
+    // configure the host's MTA to listen to the Docker IP address or you
+    // need to run a separate container and network it to the framework
+    // container. Either way, you need to specify an IP address here.
+    //
+    // If it is commented out and "mail_mechanism" is set to "smtp", attempts
+    // to send email will raise an error.
+    // "mail_host": "172.17.0.1",
     //
     // Uncomment if a port other than 25 is needed.
     // "mail_port": 587,
@@ -125,6 +137,14 @@
     //
     // or specify the Vault path to the account's password:
     // "vault_mail_name": "",
+    //
+    // SES CONFIGURATION
+    //
+    // The following setting is required and must be correct for your SES
+    // settings.
+    // "ses_region": "us-east-1",
+    // The following setting is optional and can be left commented out.
+    // "ses_config_set": "ConfigSet",
 
     // Don't touch ...
     // Leave this entry here so that higher entries can be commented in or
