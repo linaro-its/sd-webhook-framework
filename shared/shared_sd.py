@@ -245,7 +245,7 @@ def get_user_field(user_blob, field_name):
         print("Got status %s when querying %s for user field %s" % (
             result.status_code, user_blob["self"], field_name))
         return None
-    data = result.json
+    data = result.json()
     if field_name in data:
         return data["field_name"]
     return None
@@ -476,6 +476,9 @@ def get_current_status():
     url = "%s/rest/api/2/issue/%s?fields=status" % (
         shared.globals.ROOT_URL, shared.globals.TICKET)
     result = service_desk_request_get(url)
+    if result.status_code != 200:
+        print("Unable to get current status. Request status code is ", result.status_code)
+        return None
     j = result.json()
     return j["fields"]["status"]["name"]
 
@@ -495,6 +498,11 @@ def central_comment_handler(
     # wasn't posted by the bot code. Note that the required transition is
     # specified by the caller so that the shared code doesn't need to have
     # any special knowledge of the workflow.
+    status = get_current_status()
+    # If it is None, we're in trouble as we've failed to get the status so bail now
+    if status is None:
+        return (None, None)
+
     if (get_current_status() == "Resolved" and
             comment['author']['name'] != shared.globals.CONFIGURATION["bot_name"] and
             transition_if_resolved is not None):
@@ -537,6 +545,8 @@ def get_latest_comment():
         j = result.json()
         # If we're on the last page of comments, return the last comment!
         if j['isLastPage']:
+            if len(j['values']) == 0:
+                return None
             return j['values'][-1]
         # Get the next batch of comments
         start += j['size']
