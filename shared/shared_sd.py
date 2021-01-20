@@ -418,11 +418,40 @@ def assign_issue_to(person):
         "%s/rest/api/2/issue/%s/assignee" %
         (shared.globals.ROOT_URL, shared.globals.TICKET),
         json.dumps(update))
+    # On Cloud, this can fail because of GDPR settings so we need to
+    # take extra steps if that happens.
+    if result.status_code == 400:
+        # Check the error message
+        error = result.json()
+        if "errorMessages" in error and \
+            error["errorMessages"][0] == "'accountId'must be the only user identifying query parameter in GDPR strict mode.":
+            result = assign_issue_to_account_id(person)
+    # Either not the right error message or we've just tried using assign issue to account_id
     if result.status_code != 204:
         post_comment(
-            "[~philip.colmer@linaro.org] Unable to assign issue to '%s'. "
-            "Error code %s and message '%s'" %
+            "Unable to assign issue to '%s'. Error code %s and message '%s'" %
             (person, result.status_code, result.text), False)
+
+
+def assign_issue_to_account_id(person):
+    """ Convert the person's name to an anonymised account id and then assign issue. """
+    result = service_desk_request_get(
+        "%s/rest/api/2/assignable/multiProjectSearch"
+        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
+        person, shared.globals.PROJECT)
+    )
+    if result.status_code != 200:
+        return result
+    # Should return us precisely one user ...
+    data = result.json()
+    if data == []:
+        return result # Not really helpful but the status code isn't 204 so we'll get a comment
+    account_id = data[0]["accountId"]
+    update = {'accountId': account_id}
+    return service_desk_request_put(
+        "%s/rest/api/2/issue/%s/assignee" %
+        (shared.globals.ROOT_URL, shared.globals.TICKET),
+        json.dumps(update))
 
 
 def transition_request_to(name):
