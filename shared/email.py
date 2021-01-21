@@ -52,7 +52,7 @@ def send_email(msg):
     if protocol is None:
         raise MissingConfig("mail_mechanism has not been defined")
     if protocol != "smtp":
-        raise InvalidConfig("Can only use SMTP with prepared message body")
+        raise InvalidConfig("%s cannot be used with a prepared message body" % protocol)
     send_email_via_smtp(msg)
 
 def send_email_via_smtp(msg):
@@ -94,7 +94,7 @@ def send_email_via_ses(sender, recipient, subject, html_body, text_body):
     client = boto3.client('ses', region_name=aws_region)
     message = {
         "Body": {},
-        "Subect": {
+        "Subject": {
             "Charset": char_set,
             "Data": subject
         }
@@ -109,12 +109,21 @@ def send_email_via_ses(sender, recipient, subject, html_body, text_body):
             "Charset": char_set,
             "Data": text_body
         }
-    response = client.send_email(
-        Destination={
-            "ToAddresses": [ recipient ]
-        },
-        Message=message,
-        Source=sender,
-        ConfigurationSetName=configuration_set
-    )
+    if configuration_set is None:
+        response = client.send_email(
+            Destination={
+                "ToAddresses": [ recipient ]
+            },
+            Message=message,
+            Source=sender
+        )
+    else:
+        response = client.send_email(
+            Destination={
+                "ToAddresses": [ recipient ]
+            },
+            Message=message,
+            Source=sender,
+            ConfigurationSetName=configuration_set
+        )
     print("Email sent via SES to %s; message ID is %s" % (recipient, response["MessageId"]))
