@@ -8,6 +8,7 @@ import sys
 from json_minify import json_minify
 
 import shared.shared_vault as shared_vault
+import shared.shared_sd as shared_sd
 
 CONFIGURATION = None
 
@@ -74,7 +75,7 @@ def initialise_shared_sd():
     ROOT_URL = "%s//%s" % (issue_url[0], issue_url[2])
     TICKET = TICKET_DATA["key"]
     PROJECT = TICKET_DATA["fields"]["project"]["key"]
-    REPORTER = TICKET_DATA["fields"]["reporter"]["emailAddress"]
+    REPORTER = shared_sd.reporter_email_address(TICKET_DATA)
 
 
 def validate_cf_config():
