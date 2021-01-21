@@ -165,10 +165,10 @@ def automation_triggered_comment(ticket_data):
         comments = ticket_data["fields"]["comment"]["comments"]
     if comments is not None:
         last_comment = comments[-1]
-        last_author = get_user_field(last_comment["author"], "name")
+        last_author = get_user_field(last_comment["author"], "emailAddress")
         if last_author is None:
             print("Unable to retrieve author of last comment")
-            print(json.dumps(ticket_data))
+            print(json.dumps(last_comment))
             return False
         return (last_author == shared.globals.CONFIGURATION["bot_name"])
     return False
@@ -220,9 +220,8 @@ def usable_ticket_data(ticket_data):
     return True
 
 
-def get_field(ticket_data, field_id):
+def get_field(ticket_data, field_name):
     """ Return the required custom field if it is in the data. """
-    field_name = "customfield_%s" % field_id
     if ("fields" in ticket_data and
             field_name in ticket_data["fields"]):
         return ticket_data["fields"][field_name]
@@ -236,6 +235,7 @@ def get_user_field(user_blob, field_name):
     have to query the self URL to get it.
     """
     if field_name not in user_blob:
+        print("get_user_field: requested field %s is not in the blob" % field_name)
         return None
     value = user_blob[field_name]
     if value is not None:
@@ -247,7 +247,9 @@ def get_user_field(user_blob, field_name):
         return None
     data = result.json()
     if field_name in data:
-        return data["field_name"]
+        return data[field_name]
+    print("get_user_field: '%s' not in the self data" % field_name)
+    print(json.dumps(data))
     return None
 
 
@@ -424,7 +426,7 @@ def assign_issue_to(person):
         # Check the error message
         error = result.json()
         if "errorMessages" in error and \
-            error["errorMessages"][0] == "'accountId'must be the only user identifying query parameter in GDPR strict mode.":
+            error["errorMessages"][0] == "'accountId' must be the only user identifying query parameter in GDPR strict mode.":
             result = assign_issue_to_account_id(person)
     # Either not the right error message or we've just tried using assign issue to account_id
     if result.status_code != 204:
@@ -436,7 +438,7 @@ def assign_issue_to(person):
 def assign_issue_to_account_id(person):
     """ Convert the person's name to an anonymised account id and then assign issue. """
     result = service_desk_request_get(
-        "%s/rest/api/2/assignable/multiProjectSearch"
+        "%s/rest/api/2/user/assignable/multiProjectSearch"
         "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
         person, shared.globals.PROJECT)
     )
@@ -533,8 +535,8 @@ def central_comment_handler(
         return (None, None)
 
     if (get_current_status() == "Resolved" and
-            comment['author']['name'] != shared.globals.CONFIGURATION["bot_name"] and
-            transition_if_resolved is not None):
+        get_user_field(comment["author"], "name") != shared.globals.CONFIGURATION["bot_name"] and
+        transition_if_resolved is not None):
         transition_request_to(transition_if_resolved)
 
     if not(comment['public']) and keyword in supported_private_keywords:
