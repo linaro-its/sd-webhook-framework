@@ -224,8 +224,8 @@ def initialise():
     try:
         shared.globals.initialise_config()
         shared.globals.initialise_ticket_data(request.json)
-        shared.globals.initialise_shared_sd()
         shared.globals.initialise_sd_auth()
+        shared.globals.initialise_shared_sd()
     except Exception as exc:
         print(exc)
         return None
