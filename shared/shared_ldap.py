@@ -245,6 +245,7 @@ def create_account(first_name, family_name, email_address, password=None):
 
 
 def is_user_in_group(group_name, user_email, recurse=False):
+    """ Is the user in the group? """
     user_dn = find_from_email(user_email)
     return is_dn_in_group(group_name, user_dn, recurse)
 
@@ -275,9 +276,9 @@ def is_dn_in_group(group_name, user_dn, recurse=False):
     if group_details is None:
         # Shouldn't happen as we know the group exists
         return False
-    for m in group_details[0].uniqueMember.values:
-        if m[:3] == "cn=":
-            group_cn = extract_id_from_dn(m)
+    for member in group_details[0].uniqueMember.values:
+        if member[:3] == "cn=":
+            group_cn = extract_id_from_dn(member)
             if is_dn_in_group(group_cn, user_dn):
                 return True
     return False
@@ -344,12 +345,12 @@ def parameterised_add_to_group(
         return result
 
 
-def extract_id_from_dn(dn):
-    # Returns the CN or the UID from the DN
+def extract_id_from_dn(distinguished_name):
+    """ Return the CN or the UID from the DN """
     # Given a DN of, say, cn=everyone,ou=mailing,ou=groups,dc=linaro,dc=org
     # split("=", 1)[1] returns everything after the first =
     # split(",", 1)[0] returns everything before the first ,
-    return dn.split("=", 1)[1].split(",", 1)[0]
+    return distinguished_name.split("=", 1)[1].split(",", 1)[0]
 
 
 def add_to_security_group(group_name, add_dn):
@@ -415,6 +416,7 @@ def add_to_group(group_name, add_dn):
 
 
 def add_owner_to_group(group_name, add_dn):
+    """ Add owner to specified group """
     part_1 = add_owner_to_security_group(group_name, add_dn)
     part_2 = add_owner_to_mailing_group(group_name, add_dn)
     return part_1 and part_2
@@ -515,6 +517,7 @@ def remove_from_group(group_name, object_dn):
 
 
 def remove_owner_from_group(group_name, object_dn):
+    """ Remove owner from specified group """
     part_1 = remove_owner_from_security_group(group_name, object_dn)
     part_2 = remove_owner_from_mailing_group(group_name, object_dn)
     return part_1 and part_2
@@ -577,8 +580,10 @@ def move_object(current_dn, new_ou):
 
 
 def find_group(name, attributes):
-    """ Try to find a group with the given email address or, failing that, the name. """
-    """ Returns the canonical email address for the found group and the requested attributes. """
+    """
+    Try to find a group with the given email address or, failing that, the name.
+    Returns the canonical email address for the found group and the requested attributes.
+    """
     if "@" not in name:
         # We don't have an email address so try to get one
         result = find_matching_objects(
@@ -620,7 +625,7 @@ def reporter_is_group_owner(owner_list):
     if reporter_dn is None:
         # Shouldn't happen ...
         return False
-    
+
     is_owner = False
     for owner in owner_list:
         if ",ou=mailing," in owner:
@@ -680,7 +685,7 @@ def find_single_object_from_email(email_address):
         ["cn"])
     if result is not None and len(result) == 1:
         return result[0].entry_dn
-    
+
     # If still no match, try again without the GMail cleanup just in case
     # a GMail account was added without the cleanup.
     result = find_matching_objects(
@@ -692,9 +697,9 @@ def find_single_object_from_email(email_address):
     return None
 
 
-def get_manager_from_dn(dn):
-    # Get the manager DN from the staff DN
-    result = get_object(dn, ["manager"])
+def get_manager_from_dn(distinguished_name):
+    """ Get the manager DN from the staff DN """
+    result = get_object(distinguished_name, ["manager"])
     if result.manager.value is not None:
         mgr_email = get_object(result.manager.value, ["mail"])
         if mgr_email.mail.values != []:
