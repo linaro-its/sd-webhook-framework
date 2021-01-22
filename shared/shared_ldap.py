@@ -532,11 +532,15 @@ def get_object(object_dn, attributes):
     return None
 
 
-def find_matching_objects(ldap_filter, attributes):
+def find_matching_objects(ldap_filter, attributes, base=None):
     """ Return any objects matching the search filter."""
+    # Set base here rather than in the function definition to avoid
+    # base_dn() being called when Python loads the library.
+    if base is None:
+        base = base_dn()
     with get_ldap_connection() as conn:
         if conn.search(
-                base_dn(),
+                base,
                 search_filter=ldap_filter,
                 search_scope=SUBTREE,
                 attributes=attributes):
