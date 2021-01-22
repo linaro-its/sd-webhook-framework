@@ -22,6 +22,7 @@ import shared.custom_fields as custom_fields
 import shared.globals
 import shared.shared_ldap as shared_ldap
 
+GDPR_ERROR = "'accountId' must be the only user identifying query parameter in GDPR strict mode."
 
 class SharedSDError(Exception):
     """ Base exception class for the library. """
@@ -165,12 +166,7 @@ def automation_triggered_comment(ticket_data):
         comments = ticket_data["fields"]["comment"]["comments"]
     if comments is not None:
         last_comment = comments[-1]
-        last_author = get_user_field(last_comment["author"], "emailAddress")
-        if last_author is None:
-            print("Unable to retrieve author of last comment")
-            print(json.dumps(last_comment))
-            return False
-        return (last_author == shared.globals.CONFIGURATION["bot_name"])
+        return user_is_bot(last_comment["author"])
     return False
 
 
@@ -253,6 +249,11 @@ def get_user_field(user_blob, field_name):
     return None
 
 
+def user_is_bot(user_blob):
+    """ Check if the user mentioned in the blob is the configured bot. """
+    return get_user_field(user_blob, "emailAddress") == shared.globals.CONFIGURATION["bot_name"]
+
+
 def get_reporter_field(ticket_data, field_name):
     """ Generalised function to get a field back for the reporter. """
     if ("fields" in ticket_data and
@@ -284,13 +285,14 @@ def get_group_members(group_name):
             if unpack["isLast"]:
                 break
             index += unpack["maxResults"]
-            result = service_desk_request_get("%s&startAt=%s" % (
-                    query_url, index))
+            result = service_desk_request_get(
+                "%s&startAt=%s" % (query_url, index))
             # and loop ...
         else:
-            print("get_group_members(%s) failed with error code %s" % (group_name, result.status_code))
+            print("get_group_members(%s) failed with error code %s" % (
+                group_name, result.status_code))
             break
-    return members    
+    return members
 
 
 def groups_for_user(email_address):
@@ -426,7 +428,7 @@ def assign_issue_to(person):
         # Check the error message
         error = result.json()
         if "errorMessages" in error and \
-            error["errorMessages"][0] == "'accountId' must be the only user identifying query parameter in GDPR strict mode.":
+            error["errorMessages"][0] == GDPR_ERROR:
             result = assign_issue_to_account_id(person)
     # Either not the right error message or we've just tried using assign issue to account_id
     if result.status_code != 204:
@@ -439,8 +441,7 @@ def assign_issue_to_account_id(person):
     """ Convert the person's name to an anonymised account id and then assign issue. """
     result = service_desk_request_get(
         "%s/rest/api/2/user/assignable/multiProjectSearch"
-        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
-        person, shared.globals.PROJECT)
+        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL, person, shared.globals.PROJECT)
     )
     if result.status_code != 200:
         return result
@@ -535,8 +536,8 @@ def central_comment_handler(
         return (None, None)
 
     if (get_current_status() == "Resolved" and
-        get_user_field(comment["author"], "name") != shared.globals.CONFIGURATION["bot_name"] and
-        transition_if_resolved is not None):
+            not user_is_bot(comment["author"]) and
+            transition_if_resolved is not None):
         transition_request_to(transition_if_resolved)
 
     if not(comment['public']) and keyword in supported_private_keywords:
@@ -596,23 +597,23 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
     if get_current_status() == "Needs approval":
         return
 
-    if get_user_field(last_comment["author"], "name") == shared.globals.CONFIGURATION["bot_name"]:
+    if user_is_bot(last_comment["author"]):
         return
 
     assignee = shared.globals.TICKET_DATA["fields"]["assignee"]
-    if assignee is not None and get_user_field(assignee, "name") == shared.globals.CONFIGURATION["bot_name"]:
+    if assignee is not None and user_is_bot(assignee):
         assign_issue_to(None)
         if transition_to is not None:
             transition_request_to(transition_to)
 
 
-def assign_approvers(approver_list, cf):
+def assign_approvers(approver_list, custom_field):
     """
         Add the list of approvers to the specified custom field,
         making them request participants as well if needed.
     """
     flat_list = shared_ldap.flatten_list(approver_list)
-    approvers = {"fields": {cf: []}}
+    approvers = {"fields": {custom_field: []}}
     for item in flat_list:
         if item != "":
             # Cope with being sent email addresses already
@@ -622,7 +623,7 @@ def assign_approvers(approver_list, cf):
                 obj = shared_ldap.get_object(item, ["mail"])
                 item_email = obj.mail.value
             if item_email is not None:
-                approvers["fields"][cf].append(
+                approvers["fields"][custom_field].append(
                     {'name': item_email})
                 # Add them as a request participant so that they get copies of
                 # any comment notifications.
@@ -648,8 +649,10 @@ def set_summary(summary):
 
 
 def add_request_participant(email_address):
-    # Add the specified email address as a request participant to the current
-    # issue.
+    """
+    Add the specified email address as a request participant to the current
+    issue.
+    """
     update = {'usernames': [email_address]}
     json_update = json.dumps(update)
     result = service_desk_request_post(
@@ -665,8 +668,10 @@ def add_request_participant(email_address):
 
 
 def is_request_participant(email_address):
-    # Check if the specified email address is a request participant on the
-    # current issue.
+    """
+    Check if the specified email address is a request participant on the
+    current issue.
+    """
     start = 0
     while True:
         result = service_desk_request_get(
@@ -675,10 +680,10 @@ def is_request_participant(email_address):
         if result.status_code != 200:
             return False
         j = result.json()
-        for v in j['values']:
-            if v['emailAddress'] == email_address:
+        for value in j['values']:
+            if value['emailAddress'] == email_address:
                 return True
-        if not(j['isLastPage']):
+        if not j['isLastPage']:
             start += j['size']
         else:
             return False
@@ -695,9 +700,9 @@ def get_request_participants():
         if result.status_code != 200:
             return []
         j = result.json()
-        for v in j['values']:
-            list_of_participants.append(v['emailAddress'])
-        if not(j['isLastPage']):
+        for value in j['values']:
+            list_of_participants.append(value['emailAddress'])
+        if not j['isLastPage']:
             start += j['size']
         else:
             return list_of_participants
