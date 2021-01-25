@@ -9,21 +9,20 @@ to use:
 flask run --host=0.0.0.0
 """
 
+import importlib
 import os
 import sys
-import importlib
 import traceback
 
-from flask import Flask, request
-import shared.globals
-import shared.shared_sd as shared_sd
-import shared.sentry_config
-
-# Using sentry.io makes it easier to catch errors, particularly when the
-# code is running insider a container and the logs might not be actively
-# checked.
 import sentry_sdk
+from flask import Flask, request
 from sentry_sdk.integrations.flask import FlaskIntegration
+
+import shared.globals
+import shared.sentry_config
+import shared.shared_sd as shared_sd
+
+UNEXPECTED = "An unexpected error occurred in the automation:\n%s"
 
 # This must stay before the Flask initialisation.
 if shared.sentry_config.SENTRY_DSN is not None:
@@ -59,10 +58,7 @@ def create():
             save_ticket_data(handler)
             handler.create(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
-            shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
-                False
-            )
+            shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
 
 
@@ -78,10 +74,7 @@ def comment():
             save_ticket_data(handler)
             handler.comment(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
-            shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
-                False
-            )
+            shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
 
 
@@ -95,10 +88,7 @@ def org_change():
             save_ticket_data(handler)
             handler.org_change(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
-            shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
-                False
-            )
+            shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
 
 
@@ -117,7 +107,7 @@ def jira_hook():
             trigger_is_transition(shared.globals.TICKET_DATA)
         try:
             if (("TRANSITION" in handler.CAPABILITIES and status_result) or
-                     ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result)):
+                    ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result)):
                 save_ticket_data(handler)
             if "TRANSITION" in handler.CAPABILITIES and status_result:
                 print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
@@ -126,18 +116,16 @@ def jira_hook():
                 print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
-            shared_sd.post_comment(
-                "An unexpected error occurred in the automation:\n%s" % traceback.format_exc(),
-                False
-            )
+            shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
 
 
 def save_ticket_data(handler):
+    """ Save the ticket data to the ticket. """
     save_data = False
     try:
         save_data = handler.SAVE_TICKET_DATA
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     if save_data:
@@ -197,7 +185,7 @@ def initialise_handler():
             "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
             file=sys.stderr)
         return None
-    
+
     print(
         "Called to handle %s but no handler found." % reqtype,
         file=sys.stderr)
@@ -205,13 +193,14 @@ def initialise_handler():
 
 
 def import_handler(dir_path, filename):
+    """ Load the desired handler. """
     print("Loading '%s/%s.py' as handler for %s" % (dir_path, filename, shared.globals.TICKET),
-            file=sys.stderr)
+          file=sys.stderr)
     handler = importlib.import_module(filename)
     # Make sure that the handler has a CAPABILITIES block
     try:
         _ = handler.CAPABILITIES
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         print(
             "Handler is missing CAPABILITIES definition",
             file=sys.stderr)
@@ -226,7 +215,7 @@ def initialise():
         shared.globals.initialise_ticket_data(request.json)
         shared.globals.initialise_sd_auth()
         shared.globals.initialise_shared_sd()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         print(exc)
         return None
     return initialise_handler()
