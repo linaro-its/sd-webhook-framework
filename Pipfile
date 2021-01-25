@@ -24,4 +24,3 @@ ldap3 = "*"
 unidecode = "*"
 sentry-sdk = {extras = ["flask"], version = "*"}
 google-api-python-client = "*"
-flask-wtf = "*"

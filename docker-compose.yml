@@ -21,8 +21,6 @@ services:
     networks:
       webhooks:
         ipv4_address: 172.20.0.2
-    environment:
-      secret_key: <YOUR SECRET KEY VALUE>
     # Uncomment the following two lines (and adjust the path) if your handlers
     # are *not* in the rt_handlers directory.
     # volumes:

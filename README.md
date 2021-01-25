@@ -88,8 +88,6 @@ Note that if you change the name of the request type, you **must** update any JQ
 
 Note that the framework will work out which request type has been used, so it is safe to omit the `IF` clause, with the understanding that the framework will be called for *all* issues created and commented on.
 
-To comply with the CSRF protection in the framework, it is necessary to configure the webhooks to add a header called `X-CSRFToken` with the value that is defined when you run the framework. See `WSGI.md` and the example Zappa repository for further details.
-
 ### Jira webhook
 
 Create a WebHook in Jira with the following settings:
