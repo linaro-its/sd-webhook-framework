@@ -69,9 +69,7 @@ def send_email_via_smtp(msg):
     session = smtplib.SMTP(server, port=port)
     if ssl_required:
         # only TLSv1 or higher
-        context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        context.options |= ssl.OP_NO_SSLv2
-        context.options |= ssl.OP_NO_SSLv3
+        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         resp, _ = session.starttls(context=context)
         if resp != 220:
             raise BadStartTls()
