@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    paths-ignpre:
+      - .github/workflows/pullrequest.yml
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - name: Fetch git repository
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: philips-software/sonar-scanner-action@master
+        with:
+          url: ${{ secrets.SONARQUBE_HOST }}
+          token: ${{ secrets.SONARQUBE_TOKEN }}
+          projectKey: sd-webhook-framework
+          projectName: SD Webhook Framework
+
+      - name: Cleanup scan
+        run: sudo rm -rf "$GITHUB_WORKSPACE/.scannerwork"
