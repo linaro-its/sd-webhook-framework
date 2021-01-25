@@ -23,6 +23,7 @@ import shared.globals
 import shared.shared_ldap as shared_ldap
 
 GDPR_ERROR = "'accountId' must be the only user identifying query parameter in GDPR strict mode."
+TRANSITION_API = "%s/rest/api/2/issue/%s/transitions"
 
 class SharedSDError(Exception):
     """ Base exception class for the library. """
@@ -103,7 +104,7 @@ def save_text_as_attachment(filename, content, comment, public):
             result = service_desk_request_post(
                 "%s/rest/servicedeskapi/request/%s/attachment" % (
                     shared.globals.ROOT_URL, shared.globals.TICKET),
-                json.dumps(create))
+                create)
             if result.status_code == 404:
                 print(
                     "WARNING! It doesn't look like %s has permission to add attachments to %s"
@@ -130,7 +131,6 @@ def ticket_request_type(ticket_data):
     if crt_cf is None:
         raise CustomFieldLookupFailure(
             "Failed to find the request type information")
-    # cf_name = "customfield_%s" % crt_cf
     if crt_cf not in ticket_data["fields"]:
         raise MalformedIssueError(
             "Failed to find '%s' in issue fields" % crt_cf)
@@ -359,13 +359,12 @@ def post_comment(comment, public_switch):
     new_comment = {}
     new_comment['body'] = comment
     new_comment['public'] = public_switch
-    json_comment = json.dumps(new_comment)
     # Quietly ignore any errors returned. If we can't comment, we can't do
     # much!
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/comment" % (
             shared.globals.ROOT_URL, shared.globals.TICKET),
-        json_comment
+        new_comment
     )
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
@@ -379,7 +378,7 @@ def create_request(request_data):
     """ Create a Service Desk request from the provided data. """
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request" % shared.globals.ROOT_URL,
-        json.dumps(request_data))
+        request_data)
     if result.status_code != 201:
         print("Got status code %s in create_request" % result.status_code)
         print(result.text)
@@ -403,9 +402,8 @@ def resolve_ticket(resolution_state="Done", assign_to_bot=True):
             }
         }
         result = service_desk_request_post(
-            "%s/rest/api/2/issue/%s/transitions" %
-            (shared.globals.ROOT_URL, shared.globals.TICKET),
-            json.dumps(update))
+            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET),
+            update)
         if result.status_code != 204:
             post_comment(
                 "Unable to mark issue as Done. Error code %s and message '%s'"
@@ -468,9 +466,8 @@ def transition_request_to(name):
     if transition_id != 0:
         update = {'transition': {'id': transition_id}}
         result = service_desk_request_post(
-            "%s/rest/api/2/issue/%s/transitions" %
-            (shared.globals.ROOT_URL, shared.globals.TICKET),
-            json.dumps(update))
+            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET),
+            update)
         if result.status_code != 204:
             post_comment(
                 "Transition '%s' failed with error code %s and message '%s'"
@@ -479,8 +476,7 @@ def transition_request_to(name):
 
 def find_transition(transition_name):
     """ Find a transition to get to the desired state and return the matching ID. """
-    url = "%s/rest/api/2/issue/%s/transitions" % (
-        shared.globals.ROOT_URL, shared.globals.TICKET)
+    url = TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET)
     lower_name = transition_name.lower()
     result = service_desk_request_get(url)
     if result.status_code != 200:
@@ -654,10 +650,9 @@ def add_request_participant(email_address):
     issue.
     """
     update = {'usernames': [email_address]}
-    json_update = json.dumps(update)
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/participant" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET), json_update)
+            shared.globals.ROOT_URL, shared.globals.TICKET), update)
     if result.status_code != 200:
         post_comment(
             "Unable to add %s as request "
@@ -708,31 +703,28 @@ def get_request_participants():
             return list_of_participants
 
 
-def service_desk_request_get(url):
-    """Centralised routine to GET from Service Desk."""
-    headers = {
+def sd_headers():
+    """ Return the required headers for Service Desk. """
+    return {
         'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
         'content-type': 'application/json',
         'X-ExperimentalApi': 'true'
     }
+
+
+def service_desk_request_get(url):
+    """Centralised routine to GET from Service Desk."""
+    headers = sd_headers()
     return requests.get(url, headers=headers)
 
 
 def service_desk_request_post(url, data):
     """Centralised routine to POST to Service Desk."""
-    headers = {
-        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
-        'content-type': 'application/json',
-        'X-ExperimentalApi': 'true'
-    }
+    headers = sd_headers()
     return requests.post(url, headers=headers, data=data)
 
 
 def service_desk_request_put(url, data):
     """Centralised routine to PUT to Service Desk."""
-    headers = {
-        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
-        'content-type': 'application/json',
-        'X-ExperimentalApi': 'true'
-    }
+    headers = sd_headers()
     return requests.put(url, headers=headers, data=data)
