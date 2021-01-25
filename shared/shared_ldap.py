@@ -14,6 +14,9 @@ import shared.globals
 import shared.shared_google as shared_google
 
 
+MAILING_OU = ",ou=mailing,"
+
+
 class NotEnabledError(Exception):
     """ LDAP not enabled exception. """
 
@@ -628,7 +631,7 @@ def reporter_is_group_owner(owner_list):
 
     is_owner = False
     for owner in owner_list:
-        if ",ou=mailing," in owner:
+        if MAILING_OU in owner:
             grp_name = owner.split(',', 1)[0].split('=')[1]
             if is_dn_in_group(grp_name, reporter_dn):
                 is_owner = True
@@ -646,15 +649,20 @@ def flatten_list(starting_list):
     result = []
     for item in starting_list:
         if item != "":
-            if ",ou=mailing," in item:
-                name = extract_id_from_dn(item)
-                recurse = get_group_membership(name)
-                for member in recurse:
-                    if member not in result:
-                        result.append(member)
-            elif item not in result:
-                result.append(item)
+            process_list_member(item, result)
     return result
+
+
+def process_list_member(item, result):
+    """ Process an individual list member when flattening. """
+    if MAILING_OU in item:
+        name = extract_id_from_dn(item)
+        recurse = get_group_membership(name)
+        for member in recurse:
+            if member not in result:
+                result.append(member)
+    elif item not in result:
+        result.append(item)
 
 
 def get_group_membership(group_name):
@@ -662,7 +670,7 @@ def get_group_membership(group_name):
     _, result = find_group(group_name, ["uniqueMember"])
     members = []
     for member in result[0].uniqueMember.values:
-        if ",ou=mailing," in member:
+        if MAILING_OU in member:
             members += get_group_membership(member)
         else:
             members.append(member)
