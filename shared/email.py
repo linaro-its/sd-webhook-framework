@@ -5,7 +5,6 @@ import ssl
 from email.message import EmailMessage
 
 import boto3
-from botocore.exceptions import ClientError
 
 import shared.globals
 
@@ -73,7 +72,8 @@ def send_email_via_smtp(msg):
         context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
         context.options |= ssl.OP_NO_SSLv2
         context.options |= ssl.OP_NO_SSLv3
-        if session.starttls(context=context)[0] != 220:
+        resp, _ = session.starttls(context=context)
+        if resp != 220:
             raise BadStartTls()
     if user is not None:
         session.login(user, password)
@@ -112,7 +112,7 @@ def send_email_via_ses(sender, recipient, subject, html_body, text_body):
     if configuration_set is None:
         response = client.send_email(
             Destination={
-                "ToAddresses": [ recipient ]
+                "ToAddresses": [recipient]
             },
             Message=message,
             Source=sender
@@ -120,7 +120,7 @@ def send_email_via_ses(sender, recipient, subject, html_body, text_body):
     else:
         response = client.send_email(
             Destination={
-                "ToAddresses": [ recipient ]
+                "ToAddresses": [recipient]
             },
             Message=message,
             Source=sender,
