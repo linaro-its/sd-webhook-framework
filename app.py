@@ -16,6 +16,7 @@ import traceback
 
 import sentry_sdk
 from flask import Flask, request
+from flask_wtf.csrf import CSRFProtect
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import shared.globals
@@ -34,6 +35,8 @@ if shared.sentry_config.SENTRY_DSN is not None:
 
 
 APP = Flask(__name__)
+APP.secret_key = os.environ.get("secret_key")
+csrf = CSRFProtect(APP)
 
 
 @APP.route('/', methods=['GET'])
@@ -93,6 +96,7 @@ def org_change():
 
 
 @APP.route('/jira-hook', methods=['POST'])
+@csrf.exempt
 def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
     handler = initialise()

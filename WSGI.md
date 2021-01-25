@@ -4,6 +4,8 @@ Since WSGI is specific to the version of Python being used and you can only have
 
 A `docker-compose.yml` file has been provided to simplify building and starting the container. Before using this, ensure that the required handlers have been copied into the `rt_handlers` directory or you've uncommented the volume mount line in `docker-compose.yml` and pointed it at the directory where the handlers can be found.
 
+Note that a secret key must be defined in the `docker-compose.yml` file and this value must match the value configured in the Service Desk webhooks.
+
 Running `sudo docker-compose up` will start the container (building it first if required) and display any output produced from the container. The framework should then be accessible on port 8000 on the host.
 
 To have the framework running in the background, use `sudo docker-compose up -d`.
