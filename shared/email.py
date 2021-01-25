@@ -70,9 +70,9 @@ def send_email_via_smtp(msg):
     if ssl_required:
         # only TLSv1 or higher
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        resp, _ = session.starttls(context=context)
-        if resp != 220:
-            raise BadStartTls()
+        # starttls now raises an exception itself if the
+        # response code is not 220
+        session.starttls(context=context)
     if user is not None:
         session.login(user, password)
     recipients = [msg['To']]
