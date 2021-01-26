@@ -23,12 +23,16 @@ SCOPES = [
 ]
 
 def get_credentials():
+    """ Build the Google credentials. """
     json_blob = shared.globals.get_google_credentials()
     return service_account.Credentials.from_service_account_info(
         json_blob, scopes=SCOPES)
 
 def check_group_alias(email):
     """ See if we can find a group on Google with the specified email address. """
+    if shared.globals.config("google_enabled") in (None, False):
+        return None
+
     delegated_creds = get_credentials().with_subject(shared.globals.CONFIGURATION["google_admin"])
     with build('admin', 'directory_v1', credentials=delegated_creds) as service:
         response = service.groups().get(groupKey=email).execute()
