@@ -150,8 +150,8 @@ def initialise_config():
     try:
         with open(config_file) as handle:
             CONFIGURATION = json.loads(json_minify(handle.read()))
-    except json.decoder.JSONDecodeError:
-        raise MalformedJSON("Unable to decode configuration file successfully")
+    except json.decoder.JSONDecodeError as exc:
+        raise MalformedJSON("Unable to decode configuration file successfully") from exc
     validate_cf_config()
     validate_auth_config()
 
