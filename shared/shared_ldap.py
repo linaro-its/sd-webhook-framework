@@ -186,27 +186,37 @@ def get_result_cookie(result):
     return None
 
 
-def get_next_uid_number():
-    """ Searches the accounts to find the highest one in use. """
-    uid_number = 0
+def get_next_id_number(obj_class, id_attr):
+    """ Searches the specified class to find the highest ID in use. """
+    id_number = 0
     with get_ldap_connection() as conn:
         search_parameters = {
             'search_base': base_dn(),
-            'search_filter': '(objectclass=posixAccount)',
-            'attributes': ['uidNumber']
+            'search_filter': '(objectclass=%s)' % obj_class,
+            'attributes': [id_attr]
         }
         while True:
             conn.search(**search_parameters)
             for entry in conn.entries:
-                this_uid = int(entry.uidNumber.value)
-                if this_uid > uid_number:
-                    uid_number = this_uid
+                this_id = int(entry[id_attr].value)
+                if this_id > id_number:
+                    id_number = this_id
             cookie = get_result_cookie(conn.result)
             if cookie:
                 search_parameters['paged_cookie'] = cookie
             else:
                 break
-    return uid_number+1
+    return id_number+1
+
+
+def get_next_uid_number():
+    """ Searches the accounts to find the highest one in use. """
+    return get_next_id_number("posixAccount", "uidNumber")
+
+
+def get_next_gid_number():
+    """ Searches the security groups to find the highest one in use. """
+    return get_next_id_number("posixGroup", "gidNumber")
 
 
 def create_account(first_name, family_name, email_address, password=None):
@@ -231,13 +241,13 @@ def create_account(first_name, family_name, email_address, password=None):
         "homeDirectory": "/home/%s" % uid,
         "sn": family_name.encode("utf-8"),
         "mail": email_address,
-        "loginShell": "/bin/bash"
+        "loginShell": "/bin/bash",
+        "uidNumber": str(get_next_uid_number())
     }
     if first_name is not None:
         add_record["givenName"] = first_name.encode('utf-8')
     if password is not None:
         add_record["userPassword"] = password
-    add_record["uidNumber"] = str(get_next_uid_number())
     with get_ldap_connection() as conn:
         if conn.add(
                 "uid=%s,%s" % (uid, org_unit),
@@ -246,6 +256,51 @@ def create_account(first_name, family_name, email_address, password=None):
     # Failed to create the account
     return None
 
+
+def create_group(name, description, display_name, address, owners):
+    """
+    Create security & mailing groups in LDAP. This is somewhat
+    Linaro-specific because of the classes used and the fact that
+    there are both types of group.
+
+    To that end, each type of group is only created if the relevant
+    OU is specified in the configuration.    
+    """
+    add_record = {
+        'objectClass': ['extensibleObject', 'posixGroup', 'top'],
+        'cn': name,
+        'description': description,
+        'displayName': display_name,
+        'mail': address,
+        'owner': owners,
+        'gidNumber': str(get_next_gid_number())
+    }
+    # Figure out where to create this object
+    path = shared.globals.config("ldap_security_groups")
+    if path is not None:
+        path = "%s,%s" % (path, BASE_DN)
+        with get_ldap_connection() as conn:
+            if not conn.add(
+                "cn=%s,%s" % (name, path),
+                attributes=add_record):
+                return add_record
+
+    # Now create the mailing group
+    add_record.pop('gidNumber')
+    add_record.pop('objectclass')
+    add_record['objectclass'] = ['extensibleObject', 'groupOfUniqueNames']
+    add_record['uniqueMember'] = ['']
+
+    path = shared.globals.config("ldap_mailing_groups")
+    if path is not None:
+        path = "%s,%s" % (path, BASE_DN)
+        with get_ldap_connection() as conn:
+            if not conn.add(
+                "cn=%s,%s" % (name, path),
+                attributes=add_record):
+                return add_record
+
+    return None
 
 def is_user_in_group(group_name, user_email, recurse=False):
     """ Is the user in the group? """
