@@ -64,7 +64,7 @@
     // "google_json_file": "",
     //
     // or specify the following Vault parameter:
-    // "vault_google_name": "secret/blob/google_name"
+    // "vault_google_name": "secret/blob/google_name",
 
     // LDAP
     //
