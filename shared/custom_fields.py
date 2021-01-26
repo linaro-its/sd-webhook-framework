@@ -89,9 +89,13 @@ def fetch_cf_value(name):
     # Only save it away if it is a value
     if value is not None:
         CF_CACHE[name] = value
-        # And resave to file
-        with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
-            json.dump(CF_CACHE, handle)
+        # And resave to file. Note that when running under Lambda, it is
+        # read-only, hence the try/catch
+        try:
+            with open(shared.globals.CONFIGURATION["cf_cachefile"], "w") as handle:
+                json.dump(CF_CACHE, handle)
+        except OSError:
+            return
 
 
 def get(name):
