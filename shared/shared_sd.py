@@ -356,9 +356,10 @@ def add_to_customfield_value(cf_id, value):
 
 def post_comment(comment, public_switch):
     """ Post a comment to the current issue. """
-    new_comment = {}
-    new_comment['body'] = comment
-    new_comment['public'] = public_switch
+    new_comment = {
+        "body": comment,
+        "public": public_switch
+    }
     # Quietly ignore any errors returned. If we can't comment, we can't do
     # much!
     result = service_desk_request_post(
@@ -372,6 +373,7 @@ def post_comment(comment, public_switch):
         print("Url: %s/rest/servicedeskapi/request/%s/comment" % (
             shared.globals.ROOT_URL, shared.globals.TICKET))
         print("Comment: %s" % comment)
+        print(result.text)
 
 
 def create_request(request_data):
@@ -721,10 +723,10 @@ def service_desk_request_get(url):
 def service_desk_request_post(url, data):
     """Centralised routine to POST to Service Desk."""
     headers = sd_headers()
-    return requests.post(url, headers=headers, data=data)
+    return requests.post(url, headers=headers, json=data)
 
 
 def service_desk_request_put(url, data):
     """Centralised routine to PUT to Service Desk."""
     headers = sd_headers()
-    return requests.put(url, headers=headers, data=data)
+    return requests.put(url, headers=headers, json=data)
