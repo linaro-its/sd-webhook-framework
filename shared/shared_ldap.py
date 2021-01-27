@@ -264,7 +264,7 @@ def create_group(name, description, display_name, address, owners):
     there are both types of group.
 
     To that end, each type of group is only created if the relevant
-    OU is specified in the configuration.    
+    OU is specified in the configuration.
     """
     add_record = {
         'objectClass': ['extensibleObject', 'posixGroup', 'top'],
@@ -287,8 +287,8 @@ def create_group(name, description, display_name, address, owners):
 
     # Now create the mailing group
     add_record.pop('gidNumber')
-    add_record.pop('objectclass')
-    add_record['objectclass'] = ['extensibleObject', 'groupOfUniqueNames']
+    add_record.pop('objectClass')
+    add_record['objectClass'] = ['extensibleObject', 'groupOfUniqueNames']
     add_record['uniqueMember'] = ['']
 
     path = shared.globals.config("ldap_mailing_groups")
