@@ -55,10 +55,10 @@
     // GOOGLE
     //
     // Set to "false" if you don't use or need Google integration
-    "google_enabled": true,
+    "google_enabled": false,
     //
     // Admin account (used for some delegated authentication)
-    "google_admin": "wibble@wibble.com",
+    // "google_admin": "wibble@wibble.com",
     //
     // Either specify a path to the service account JSON file ...
     // "google_json_file": "",
@@ -69,29 +69,29 @@
     // LDAP
     //
     // Set to "false" if you don't use or need LDAP integration
-    "ldap_enabled": true,
+    "ldap_enabled": false,
     //
     // Set this to be the name of your LDAP server.
-    "ldap_server": "ldaps://ldap-server",
+    // "ldap_server": "ldaps://ldap-server",
     //
     // Set this to be the base DN that you want to use. Leave blank
     // if you want the code to automatically determine the base DN.
-    "ldap_base_dn": "",
+    // "ldap_base_dn": "",
     //
     // Set this to be the default OU in which to place new accounts.
     // The base DN will be appended.
-    "ldap_default_account_ou": "ou=accounts",
+    // "ldap_default_account_ou": "ou=accounts",
     //
     // Set this to be the OU for security groups. The base DN will
     // be appended.
-    "ldap_security_groups": "ou=security",
+    // "ldap_security_groups": "ou=security",
     //
     // Set this to be the OU for mailing groups. The base DN will be
     // appended.
-    "ldap_mailing_groups": "ou=mailing",
+    // "ldap_mailing_groups": "ou=mailing",
     //
     // Set this to be a user on LDAP with sufficient privileges.
-    "ldap_user": "valid-ldap-DN",
+    // "ldap_user": "valid-ldap-DN",
     //
     // Either specify a password for the ldap-user ...
     // "ldap_password": "valid-ldap-password",
