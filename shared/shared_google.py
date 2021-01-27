@@ -9,6 +9,7 @@ https://developers.google.com/identity/protocols/oauth2/service-account
 """
 
 from google.oauth2 import service_account
+import googleapiclient
 from googleapiclient.discovery import build
 
 import shared.globals
@@ -34,11 +35,20 @@ def check_group_alias(email):
         return None
 
     delegated_creds = get_credentials().with_subject(shared.globals.CONFIGURATION["google_admin"])
-    with build('admin', 'directory_v1', credentials=delegated_creds) as service:
-        response = service.groups().get(groupKey=email).execute()
-        if "aliases" in response:
-            # There are aliases on this group. We only care if there are
-            # aliases because the caller will already have checked LDAP,
-            # so groups without aliases will match on the LDAP test.
-            return response["email"]
+    try:
+        # We don't cache the discovery because it generates warnings.
+        # https://stackoverflow.com/a/44518587/1233830
+        with build(
+                'admin',
+                'directory_v1',
+                credentials=delegated_creds,
+                cache_discovery=False) as service:
+            response = service.groups().get(groupKey=email).execute()
+            if "aliases" in response:
+                # There are aliases on this group. We only care if there are
+                # aliases because the caller will already have checked LDAP,
+                # so groups without aliases will match on the LDAP test.
+                return response["email"]
+    except googleapiclient.errors.HttpError:
+        pass
     return None
