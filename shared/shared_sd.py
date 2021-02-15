@@ -605,7 +605,7 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
             transition_request_to(transition_to)
 
 
-def assign_approvers(approver_list, custom_field):
+def assign_approvers(approver_list, custom_field, add_to_request_participants=True):
     """
         Add the list of approvers to the specified custom field,
         making them request participants as well if needed.
@@ -623,9 +623,9 @@ def assign_approvers(approver_list, custom_field):
             if item_email is not None:
                 approvers["fields"][custom_field].append(
                     {'name': item_email})
-                # Add them as a request participant so that they get copies of
-                # any comment notifications.
-                if not is_request_participant(item_email):
+                if add_to_request_participants:
+                    # Add them as a request participant so that they get copies of
+                    # any comment notifications.
                     add_request_participant(item_email)
     result = service_desk_request_put(
         shared.globals.TICKET_DATA["self"],
@@ -651,6 +651,8 @@ def add_request_participant(email_address):
     Add the specified email address as a request participant to the current
     issue.
     """
+    if is_request_participant(email_address):
+        return
     update = {'usernames': [email_address]}
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/participant" % (
