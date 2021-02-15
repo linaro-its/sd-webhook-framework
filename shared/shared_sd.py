@@ -345,7 +345,7 @@ def add_to_customfield_value(cf_id, value):
     result = service_desk_request_put(
         "%s/rest/api/2/issue/%s" % (
             shared.globals.ROOT_URL, shared.globals.TICKET),
-        json.dumps(data))
+        data)
     if result.status_code != 204:
         print("Got status code %s in add_to_customfield_value" % result.status_code)
         print("Url: %s/rest/api/2/issue/%s" % (
@@ -421,7 +421,7 @@ def assign_issue_to(person):
     result = service_desk_request_put(
         "%s/rest/api/2/issue/%s/assignee" %
         (shared.globals.ROOT_URL, shared.globals.TICKET),
-        json.dumps(update))
+        update)
     # On Cloud, this can fail because of GDPR settings so we need to
     # take extra steps if that happens.
     if result.status_code == 400:
@@ -454,7 +454,7 @@ def assign_issue_to_account_id(person):
     return service_desk_request_put(
         "%s/rest/api/2/issue/%s/assignee" %
         (shared.globals.ROOT_URL, shared.globals.TICKET),
-        json.dumps(update))
+        update)
 
 
 def transition_request_to(name):
@@ -629,7 +629,7 @@ def assign_approvers(approver_list, custom_field, add_to_request_participants=Tr
                     add_request_participant(item_email)
     result = service_desk_request_put(
         shared.globals.TICKET_DATA["self"],
-        json.dumps(approvers))
+        approvers)
     if result.status_code != 204:
         post_comment(
             "Got error %s (%s) when setting the"
