@@ -749,6 +749,14 @@ def find_single_object_from_email(email_address):
     if result is not None and len(result) == 1:
         return result[0].entry_dn
 
+    # Linaro uses the aRecord attribute to record email aliases so look
+    # there as well ...
+    result = find_matching_objects(
+        "(&(objectClass=posixAccount)(aRecord=%s))" % cleanup_if_gmail(email_address),
+        ["cn"])
+    if result is not None and len(result) == 1:
+        return result[0].entry_dn
+
     # If still no match, try again without the GMail cleanup just in case
     # a GMail account was added without the cleanup.
     result = find_matching_objects(
