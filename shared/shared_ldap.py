@@ -15,6 +15,7 @@ import shared.shared_google as shared_google
 
 
 MAILING_OU = ",ou=mailing,"
+CN_PATH = "cn=%s,%s"
 
 
 class NotEnabledError(Exception):
@@ -281,7 +282,7 @@ def create_group(name, description, display_name, address, owners):
         path = "%s,%s" % (path, BASE_DN)
         with get_ldap_connection() as conn:
             if not conn.add(
-                "cn=%s,%s" % (name, path),
+                CN_PATH % (name, path),
                 attributes=add_record):
                 return add_record
 
@@ -296,7 +297,7 @@ def create_group(name, description, display_name, address, owners):
         path = "%s,%s" % (path, BASE_DN)
         with get_ldap_connection() as conn:
             if not conn.add(
-                "cn=%s,%s" % (name, path),
+                CN_PATH % (name, path),
                 attributes=add_record):
                 return add_record
 
@@ -362,7 +363,7 @@ def parameterised_build_group_dn(
         group_name,
         group_location_tag):
     """ Calculate the DN for the group depending on the location. """
-    return "cn=%s,%s" % (
+    return CN_PATH % (
         group_name,
         string_combo(
             shared.globals.config(group_location_tag),
