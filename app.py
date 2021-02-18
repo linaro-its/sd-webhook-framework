@@ -96,6 +96,21 @@ def org_change():
     return ""
 
 
+@APP.route('/transition', methods=['POST'])
+def ticket_transition():
+    """ Triggered by SD Automation on transition. """
+    handler = initialise()
+    if handler is not None and "TRANSITION" in handler.CAPABILITIES:
+        try:
+            print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            save_ticket_data(handler)
+            new_status = shared.globals.TICKET_DATA["fields"]["status"]["name"]
+            handler.transition(new_status, shared.globals.TICKET_DATA)
+        except Exception:  # pylint: disable=broad-except
+            shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
+    return ""
+
+
 @APP.route('/jira-hook', methods=['POST'])
 def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
@@ -105,9 +120,9 @@ def jira_hook():
         # so we need to look at what has changed. In *theory*, it is
         # possible for both assignee and status to change so we need
         # to check and call for both.
-        assignee_result, assignee_from, assignee_to = shared_sd.\
+        assignee_result, assignee_to = shared_sd.\
             trigger_is_assignment(shared.globals.TICKET_DATA)
-        status_result, status_from, status_to = shared_sd.\
+        status_result, status_to = shared_sd.\
             trigger_is_transition(shared.globals.TICKET_DATA)
         try:
             if (("TRANSITION" in handler.CAPABILITIES and status_result) or
@@ -115,10 +130,10 @@ def jira_hook():
                 save_ticket_data(handler)
             if "TRANSITION" in handler.CAPABILITIES and status_result:
                 print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
-                handler.transition(status_from, status_to, shared.globals.TICKET_DATA)
+                handler.transition(status_to, shared.globals.TICKET_DATA)
             if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
                 print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
-                handler.assignment(assignee_from, assignee_to, shared.globals.TICKET_DATA)
+                handler.assignment(assignee_to, shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
