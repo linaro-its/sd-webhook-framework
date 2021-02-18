@@ -4,9 +4,11 @@
 - [What the framework supports](#what-the-framework-supports)
 - [Production Usage](#production-usage)
 - [Webhook Configuration](#webhook-configuration)
-  - [Service Desk webhook](#service-desk-webhook)
-  - [Jira webhook](#jira-webhook)
+  - [Service Desk (Server) webhooks](#service-desk-server-webhooks)
+  - [Jira (Server) webhook](#jira-server-webhook)
+  - [Service Desk (Cloud) webhooks](#service-desk-cloud-webhooks)
 - [Development](#development)
+  - [Local testing](#local-testing)
   - [Code contributions](#code-contributions)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=linaro-its_sd-webhook-framework&metric=alert_status)](https://sonarcloud.io/dashboard?id=linaro-its_sd-webhook-framework)
@@ -24,8 +26,6 @@ The framework can be triggered by the following actions:
 - Organization change on a ticket (`ORGCHANGE`)
 - Status change on a ticket (`TRANSITION`)
 - Assignment change on a ticket (`ASSIGNMENT`)
-
-The first three actions are triggered by Service Desk webhooks. The last two actions are triggered by a Jira webhook.
 
 Each *request type* has its own code file. The main code loads the code file appropriate to the ticket being handled.
 
@@ -53,13 +53,13 @@ There is a commented configuration file - `configuration.sample.jsonc` - which n
 
 ## Webhook Configuration
 
-For full functionality, both Jira and Service Desk webhooks need to be configured. If none of the request type handlers support assignment or status changes, it is safe to omit the Jira webhook since it will never be fired.
+If you are self-hosting Service Desk and you have [Automation for Jira](https://marketplace.atlassian.com/apps/1215460/automation-for-jira-server) installed, use the instructions for Service Desk Cloud configuration, otherwise follow the instructions for "Service Desk (Server) webhooks" and "Jira (server) webhook".
 
 In the text below, `<base URL>` is the URL that is mapped onto the framework web service. If the framework is being run on the same server as Jira Service Desk, this could be (for example) `http://localhost:8000`.
 
-### Service Desk webhook
+### Service Desk (Server) webhooks
 
-The Service Desk webhook is created through the Automation rules for a given SD project. Generally, the following rules should be configured, depending on the needs of the handlers:
+The Service Desk (Server) webhooks are created through Project Settings > Automation for a given SD project. Generally, the following rules should be configured, depending on the needs of the handlers:
 
 - When: Issue created
   - Then: Webhook
@@ -88,7 +88,7 @@ Note that if you change the name of the request type, you **must** update any JQ
 
 Note that the framework will work out which request type has been used, so it is safe to omit the `IF` clause, with the understanding that the framework will be called for *all* issues created and commented on.
 
-### Jira webhook
+### Jira (Server) webhook
 
 Create a WebHook in Jira with the following settings:
 
@@ -98,6 +98,44 @@ Create a WebHook in Jira with the following settings:
 The framework looks at the data sent by Jira and determines if it was an assignment or transition that triggered the event and acts accordingly. Note that a Jira webhook is used for transitions rather than the Service Desk "Status changed" event because it is then possible to track the before and after states.
 
 Optionally, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
+
+### Service Desk (Cloud) webhooks
+
+If you have "Automation for Jira" installed on Service Desk (Server), you can configure these rules via Project settings > Project automation. For Service Desk (Cloud), you can configure these rules via Project settings > Automation.
+
+Create automation rules for each of the following triggers:
+
+1. Issue created
+2. Issue commented
+3. Field value changed
+   - Fields to monitor for changes: Organizations
+   - For: All issue operations
+4. Issue transitioned
+5. Issue assigned
+
+For each rule:
+
+- Optionally add a condition of:
+  - Issue fields condition
+  - Field: Request Type:
+  - Condition: is one of
+  - Value: request types that you want to limit the rule to
+- New action
+  - Notifications - Send web request
+    - Webhook URL: `<base URL>`/`<action>`
+    - (Optional) Headers
+    - HTTP method: `POST`
+    - Webhook body: `Issue data`
+
+For the webhook URLs, the `action` value should be one of the following according to the trigger:
+
+1. `create`
+2. `comment`
+3. `org-change`
+4. `transition`
+5. `assignment`
+
+If using the framework with Zappa (see below), the optional headers can be used to set `x-api-key` to the appropriate API Gateway key value. This must be done on **all** or **none** of the webhooks.
 
 ## Development
 
@@ -119,6 +157,17 @@ Unit tests and coverage tests can be executed with:
     pytest
 
 If any Python packages are added via Pipenv, please remember to update `requirements.txt` as the latter is used by the Docker container's build process. Note that only the "top-level" packages are included, rather than generating the file automatically from Pipenv.
+
+### Local testing
+
+One way to troubleshoot the code is as follows:
+
+1. Modify the webhooks so that the content is delivered to [RequestBin](https://requestbin.com/) rather than the framework. This allows you to capture the data sent from Service Desk.
+2. Save the content to a file, e.g. "comment.json"
+3. Modify "local_test.py" to read the correct file **and** trigger the correct path.
+4. If using VS Code, use "Run and Debug" on "local_test.py". It is necessary to select "Raised Exceptions" in order to get VS Code to stop when the code breaks. Please note that there are some valid occurrences of raised exceptions in the framework.
+
+Please note: if testing the `comment` route, please note that the framework explicitly reads the latest comment from the ticket, rather than using the comment data sent in the payload.
 
 ### Code contributions
 
