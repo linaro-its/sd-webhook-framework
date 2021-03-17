@@ -689,7 +689,7 @@ def reporter_is_group_owner(owner_list):
     for owner in owner_list:
         if MAILING_OU in owner:
             grp_name = owner.split(',', 1)[0].split('=')[1]
-            if is_dn_in_group(grp_name, reporter_dn):
+            if is_dn_in_group(grp_name, reporter_dn, True):
                 is_owner = True
         elif owner == reporter_dn:
             is_owner = True
