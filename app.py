@@ -140,10 +140,14 @@ def jira_hook():
         # so we need to look at what has changed. In *theory*, it is
         # possible for both assignee and status to change so we need
         # to check and call for both.
+        #
+        # Note that we pass request.json and not TICKET_DATA because the
+        # latter is literally just the ticket data but trigger_is_X needs
+        # the original body in order to decide what triggered the webhook.
         assignee_result, assignee_to = shared_sd.\
-            trigger_is_assignment(shared.globals.TICKET_DATA)
+            trigger_is_assignment(request.json)
         status_result, status_to = shared_sd.\
-            trigger_is_transition(shared.globals.TICKET_DATA)
+            trigger_is_transition(request.json)
         try:
             if (("TRANSITION" in handler.CAPABILITIES and status_result) or
                     ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result)):
