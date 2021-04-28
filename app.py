@@ -56,6 +56,10 @@ def test_sentry():
 def create():
     """ Triggered when a ticket is created. """
     handler = initialise()
+    if handler is None:
+        print("/create: no handler")
+    else:
+        print("/create: %s" % handler.CAPABILITIES)
     if handler is not None and "CREATE" in handler.CAPABILITIES:
         try:
             print("Calling create handler for %s" % shared.globals.TICKET, file=sys.stderr)
@@ -70,6 +74,10 @@ def create():
 def comment():
     """ Triggered when a non-automation comment is added to a ticket. """
     handler = initialise()
+    if handler is None:
+        print("/comment: no handler")
+    else:
+        print("/comment: %s" % handler.CAPABILITIES)
     if (handler is not None and
             "COMMENT" in handler.CAPABILITIES and
             not shared_sd.automation_triggered_comment(shared.globals.TICKET_DATA)):
@@ -86,6 +94,10 @@ def comment():
 def org_change():
     """ Triggered when the organizations change for a ticket. """
     handler = initialise()
+    if handler is None:
+        print("/org-change: no handler")
+    else:
+        print("/org-change: %s" % handler.CAPABILITIES)
     if handler is not None and "ORGCHANGE" in handler.CAPABILITIES:
         try:
             print("Calling org change handler for %s" % shared.globals.TICKET, file=sys.stderr)
@@ -100,6 +112,10 @@ def org_change():
 def ticket_transition():
     """ Triggered by SD Automation on transition. """
     handler = initialise()
+    if handler is None:
+        print("/transition: no handler")
+    else:
+        print("/transition: %s" % handler.CAPABILITIES)
     if handler is not None and "TRANSITION" in handler.CAPABILITIES:
         try:
             print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
@@ -115,6 +131,10 @@ def ticket_transition():
 def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
     handler = initialise()
+    if handler is None:
+        print("/jira-hook: no handler")
+    else:
+        print("/jira-hook: %s" % handler.CAPABILITIES)
     if handler is not None:
         # Jira hook can be triggered for any sort of update to a ticket
         # so we need to look at what has changed. In *theory*, it is
