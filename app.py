@@ -136,7 +136,6 @@ def jira_hook():
     else:
         print("/jira-hook: %s" % handler.CAPABILITIES)
     if handler is not None:
-        shared_sd.save_ticket_data_as_attachment(shared.globals.TICKET_DATA)
         # Jira hook can be triggered for any sort of update to a ticket
         # so we need to look at what has changed. In *theory*, it is
         # possible for both assignee and status to change so we need
