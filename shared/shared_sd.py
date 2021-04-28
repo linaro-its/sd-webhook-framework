@@ -198,19 +198,25 @@ def look_for_trigger(trigger_type, ticket_data, to_tag):
         for item in ticket_data["changelog"]["items"]:
             if item["field"] == trigger_type and item["fieldtype"] == "jira":
                 return True, item[to_tag]
+    else:
+        print("No usable ticket data for Jira trigger")
     return False, None
 
 
 def usable_ticket_data(ticket_data):
     """ Does the ticket data contain usable info? """
     if "webhookEvent" not in ticket_data:
+        print("No webhookEvent field in ticket data")
         return False
     if ticket_data["webhookEvent"] != "jira:issue_updated":
+        print("%s is not the event we're looking for" % ticket_data["webhookEvent"])
         return False
     if "issue_event_type_name" not in ticket_data:
+        print("No issue_event_type_name in ticket data")
         return False
     ietn = ticket_data["issue_event_type_name"]
     if ietn not in ("issue_assigned", "issue_generic"):
+        print("%s is not the type name we're looking for" % ticket_data["issue_event_type_name"])
         return False
     # It should be valid from hereon in
     return True
