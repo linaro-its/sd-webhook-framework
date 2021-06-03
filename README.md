@@ -26,6 +26,7 @@ The framework can be triggered by the following actions:
 - Organization change on a ticket (`ORGCHANGE`)
 - Status change on a ticket (`TRANSITION`)
 - Assignment change on a ticket (`ASSIGNMENT`)
+- Generic Jira webhook (`JIRAHOOK`)
 
 Each *request type* has its own code file. The main code loads the code file appropriate to the ticket being handled.
 
@@ -97,7 +98,9 @@ Create a WebHook in Jira with the following settings:
 
 The framework looks at the data sent by Jira and determines if it was an assignment or transition that triggered the event and acts accordingly. Note that a Jira webhook is used for transitions rather than the Service Desk "Status changed" event because it is then possible to track the before and after states.
 
-Optionally, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
+If you want to be more flexible with the Jira webhook, e.g. fire on reasons other than assignment or transition, use the `JIRAHOOK` capability. The framework will trigger the handler code for a generic hook if the reason is not assignment or transition.
+
+For all webhook configurations, you can specify a JQL query to restrict the webhook to appropriate projects and request types in order to ensure that the webhook only fires when appropriate. To filter on request types, use `Customer Request Type`.
 
 ### Service Desk (Cloud) webhooks
 
@@ -134,6 +137,8 @@ For the webhook URLs, the `action` value should be one of the following accordin
 3. `org-change`
 4. `transition`
 5. `assignment`
+
+For the `JIRAHOOK` capability, this must still be defined as a Jira webhook rather than as a Service Desk automation rule.
 
 If using the framework with Zappa (see below), the optional headers can be used to set `x-api-key` to the appropriate API Gateway key value. This must be done on **all** or **none** of the webhooks.
 

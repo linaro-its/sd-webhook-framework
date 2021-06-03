@@ -6,7 +6,9 @@ CAPABILITIES = [
     "CREATE",
     "COMMENT",
     "ASSIGNMENT",
-    "TRANSITION"
+    "TRANSITION",
+    "ORGCHANGE",
+    "JIRAHOOK"
 ]
 
 
@@ -35,3 +37,15 @@ def assignment(assignee_to, ticket_data):
     """ Assignment handler. """
     _ = ticket_data
     print("Assigned to %s" % assignee_to)
+
+
+def org_change(ticket_data):
+    """ Org change handler. """
+    _ = ticket_data
+    print("Org change function has been called")
+
+
+def jira_hook(ticket_data):
+    """ General Jira hook handler. """
+    _ = ticket_data
+    print("Jira hook function has been called")

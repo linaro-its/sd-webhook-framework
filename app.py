@@ -158,6 +158,9 @@ def jira_hook():
             if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
                 print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.assignment(assignee_to, shared.globals.TICKET_DATA)
+            if "JIRAHOOK" in handler.CAPABILITIES and not status_result and not assignee_result:
+                print("Calling Jira hook handler for %s" % shared.globals.TICKET, file=sys.stderr)
+                handler.jira_hook(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
