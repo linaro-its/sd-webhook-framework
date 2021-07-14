@@ -159,7 +159,10 @@ def jira_hook():
                 handler.assignment(assignee_to, shared.globals.TICKET_DATA)
             if is_generic_jira(handler.CAPABILITIES, status_result, assignee_result):
                 print("Calling Jira hook handler for %s" % shared.globals.TICKET, file=sys.stderr)
-                handler.jira_hook(shared.globals.TICKET_DATA)
+                # A generic handler might need to know what has changed so extract the change log
+                # if there is one.
+                changelog = request.json["changelog"] if "changelog" in request.json else None
+                handler.jira_hook(shared.globals.TICKET_DATA, changelog)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
