@@ -149,21 +149,42 @@ def jira_hook():
         status_result, status_to = shared_sd.\
             trigger_is_transition(request.json)
         try:
-            if (("TRANSITION" in handler.CAPABILITIES and status_result) or
-                    ("ASSIGNMENT" in handler.CAPABILITIES and assignee_result)):
+            if got_handled_jira_event(handler.CAPABILITIES, status_result, assignee_result):
                 save_ticket_data(handler)
-            if "TRANSITION" in handler.CAPABILITIES and status_result:
+            if is_transition(handler.CAPABILITIES, status_result):
                 print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.transition(status_to, shared.globals.TICKET_DATA)
-            if "ASSIGNMENT" in handler.CAPABILITIES and assignee_result:
+            if is_assignment(handler.CAPABILITIES, assignee_result):
                 print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.assignment(assignee_to, shared.globals.TICKET_DATA)
-            if "JIRAHOOK" in handler.CAPABILITIES and not status_result and not assignee_result:
+            if is_generic_jira(handler.CAPABILITIES, status_result, assignee_result):
                 print("Calling Jira hook handler for %s" % shared.globals.TICKET, file=sys.stderr)
                 handler.jira_hook(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
             shared_sd.post_comment(UNEXPECTED % traceback.format_exc(), False)
     return ""
+
+
+def got_handled_jira_event(capabilities, status_result, assignee_result):
+    """ Central checker for Jira webhook handling """
+    return is_transition(capabilities, status_result) or \
+        is_assignment(capabilities, assignee_result) or \
+            is_generic_jira(capabilities, status_result, assignee_result)
+
+
+def is_transition(capabilities, status_result):
+    """ Check that we're handling a transition """
+    return "TRANSITION" in capabilities and status_result
+
+
+def is_assignment(capabilities, assignee_result):
+    """ Check that we're handling an assignment """
+    return "ASSIGNMENT" in capabilities and assignee_result
+
+
+def is_generic_jira(capabilities, status_result, assignee_result):
+    """ Check that we're handling a generic Jira trigger """
+    return "JIRAHOOK" in capabilities and not status_result and not assignee_result
 
 
 def save_ticket_data(handler):
