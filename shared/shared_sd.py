@@ -273,6 +273,19 @@ def reporter_email_address(ticket_data):
     return get_reporter_field(ticket_data, "emailAddress")
 
 
+def get_assignee_field(ticket_data, field_name):
+    """ Generalised function to get a field back for the assignee. """
+    if ("fields" in ticket_data and
+            "assignee" in ticket_data["fields"]):
+        return get_user_field(ticket_data["fields"]["assignee"], field_name)
+    return None
+
+
+def assignee_email_address(ticket_data):
+    """ Get the assignee's email address from the ticket data. """
+    return get_assignee_field(ticket_data, "emailAddress")
+
+
 def get_group_members(group_name):
     """ Get the members of the specified group. """
     enc_group_name = urllib.parse.quote(group_name)
