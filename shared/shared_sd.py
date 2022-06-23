@@ -236,7 +236,7 @@ def get_user_field(user_blob, field_name):
     doesn't populate a lot of this data, though, meaning we then
     have to query the self URL to get it.
     """
-    if field_name not in user_blob:
+    if user_blob is None or field_name not in user_blob:
         print("get_user_field: requested field %s is not in the blob" % field_name)
         return None
     value = user_blob[field_name]
