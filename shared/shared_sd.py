@@ -236,8 +236,12 @@ def get_user_field(user_blob, field_name):
     doesn't populate a lot of this data, though, meaning we then
     have to query the self URL to get it.
     """
-    if user_blob is None or field_name not in user_blob:
-        print("get_user_field: requested field %s is not in the blob" % field_name)
+    if user_blob is None:
+        print("get_user_field: passed None as user blob")
+        return
+    if field_name not in user_blob:
+        print(f"get_user_field: requested field {field_name} is not in the blob")
+        print(json.dumps(user_blob))
         return None
     value = user_blob[field_name]
     if value is not None:
@@ -250,7 +254,7 @@ def get_user_field(user_blob, field_name):
     data = result.json()
     if field_name in data:
         return data[field_name]
-    print("get_user_field: '%s' not in the self data" % field_name)
+    print(f"get_user_field: '{field_name}' not in the self data")
     print(json.dumps(data))
     return None
 
