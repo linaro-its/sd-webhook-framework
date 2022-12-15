@@ -5,7 +5,7 @@ name = "pypi"
 
 [dev-packages]
 mock = "*"
-pytest = "<=5.0.1"
+pytest = "6.2.5"
 coverage = "*"
 pytest-cov = "*"
 responses = "*"
