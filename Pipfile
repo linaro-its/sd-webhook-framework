@@ -26,3 +26,5 @@ unidecode = "*"
 sentry-sdk = {extras = ["flask"], version = "*"}
 google-api-python-client = "*"
 paramiko = "*"
+requests-mock = "*"
+responses = "*"
