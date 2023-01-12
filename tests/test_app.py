@@ -125,7 +125,7 @@ def test_initialise_handler_bad_config(mi1):
     """ Test initialise_handler. """
     shared.globals.CONFIGURATION = {
         "cf_cachefile": "non_existent_file",
-        "cf_use_plugin_api": False,
+        "cf_use_server_api": False,
         "cf_use_cloud_api": False
     }
     shared.globals.TICKET_DATA = {}
@@ -239,10 +239,10 @@ class MockHandlerWithSaveTicketData:
         print("Transition from %s to %s" % (status_from, status_to))
 
     @staticmethod
-    def assignment(assignee_from, assignee_to, ticket_data):
+    def assignment(assignee_to, ticket_data):
         """ Assignment handler. """
         _ = ticket_data
-        print("Assigned from %s to %s" % (assignee_from, assignee_to))
+        print("Assigned to %s" % assignee_to)
 
 
 class MockHandlerWithoutSaveTicketData:
@@ -262,77 +262,87 @@ class MockHandlerWithoutSaveTicketData:
         print("Comment function called with %s" % ticket_data)
 
     @staticmethod
-    def transition(status_from, status_to, ticket_data):
+    def transition(status_to, ticket_data):
         """ Transition handler. """
         _ = ticket_data
-        print("Transition from %s to %s" % (status_from, status_to))
+        print("Transition to %s" % (status_to))
 
     @staticmethod
-    def assignment(assignee_from, assignee_to, ticket_data):
+    def assignment(assignee_to, ticket_data):
         """ Assignment handler. """
         _ = ticket_data
-        print("Assigned from %s to %s" % (assignee_from, assignee_to))
+        print("Assigned to %s" % assignee_to)
 
 
 def test_jira_hook_assignment(capsys):
     """ Test jira_hook assignment handling. """
     # We use patch.object here instead of @mock.patch because it is very
     # tricky to use features (capsys) in conjunction with mock params.
+    mock_request = mock.MagicMock()
+    mock_request.json = {}
     with patch.object(
             app,
             'initialise',
             return_value=MockHandlerWithSaveTicketData()):
-        with patch.object(
-                app.shared_sd,
-                'trigger_is_assignment',
-                return_value=(True, "assignee_from", "assignee_to")
-                ):
+        with mock.patch('app.request', mock_request):
             with patch.object(
                     app.shared_sd,
-                    'trigger_is_transition',
-                    return_value=(False, None, None)
-                ):
+                    'trigger_is_assignment',
+                    return_value=(True, "assignee_to")
+                    ):
                 with patch.object(
                         app.shared_sd,
-                        'save_ticket_data_as_attachment',
-                        return_value=None) as mock_save_ticket:
-                    app.jira_hook()
-                    assert mock_save_ticket.called is True
-                    captured = capsys.readouterr()
-                    assert captured.out == (
-                        "Assigned from assignee_from to assignee_to\n")
+                        'trigger_is_transition',
+                        return_value=(False, None)
+                    ):
+                    with patch.object(
+                            app.shared_sd,
+                            'save_ticket_data_as_attachment',
+                            return_value=None) as mock_save_ticket:
+                        app.jira_hook()
+                        assert mock_save_ticket.called is True
+                        captured = capsys.readouterr()
+                        assert captured.out == (
+                            "/jira-hook: ['TRANSITION', 'ASSIGNMENT', 'CREATE', 'COMMENT']\n"
+                            "Assigned to assignee_to\n")
 
 
 def test_jira_hook_transition(capsys):
     """ Test jira_hook transition handling. """
+    mock_request = mock.MagicMock()
+    mock_request.json = {}
     with patch.object(
             app,
             'initialise',
             return_value=MockHandlerWithoutSaveTicketData()):
-        with patch.object(
-                app.shared_sd,
-                'trigger_is_assignment',
-                return_value=(False, None, None)
-                ):
+        with mock.patch('app.request', mock_request):
             with patch.object(
                     app.shared_sd,
-                    'trigger_is_transition',
-                    return_value=(True, "status_from", "status_to")
-                ):
+                    'trigger_is_assignment',
+                    return_value=(False, None)
+                    ):
                 with patch.object(
                         app.shared_sd,
-                        'save_ticket_data_as_attachment',
-                        return_value=None) as mock_save_ticket:
-                    app.jira_hook()
-                    assert mock_save_ticket.called is False
-                    captured = capsys.readouterr()
-                    assert captured.out == (
-                        "Transition from status_from to status_to\n")
+                        'trigger_is_transition',
+                        return_value=(True, "status_to")
+                    ):
+                    with patch.object(
+                            app.shared_sd,
+                            'save_ticket_data_as_attachment',
+                            return_value=None) as mock_save_ticket:
+                        app.jira_hook()
+                        assert mock_save_ticket.called is False
+                        captured = capsys.readouterr()
+                        assert captured.out == (
+                            "/jira-hook: ['TRANSITION', 'ASSIGNMENT', 'CREATE', 'COMMENT']\n"
+                            "Transition to status_to\n")
 
 
 def test_comment(capsys):
     """ Test comment handling. """
-    shared.globals.TICKET_DATA = "ticket data"
+    shared.globals.TICKET_DATA = {
+        "fields" : "ticket data"
+    }
     with patch.object(
             app,
             'initialise',
@@ -344,7 +354,10 @@ def test_comment(capsys):
             app.comment()
             assert mock_save_ticket.called is True
             captured = capsys.readouterr()
-            assert captured.out == "Comment function called with ticket data\n"
+            assert captured.out == (
+                "/comment: ['TRANSITION', 'ASSIGNMENT', 'CREATE', 'COMMENT']\n"
+                "Comment function called with {'fields': 'ticket data'}\n"
+            )
 
 
 def test_create(capsys):
@@ -361,7 +374,11 @@ def test_create(capsys):
             app.create()
             assert mock_save_ticket.called is True
             captured = capsys.readouterr()
-            assert captured.out == "Create function called with ticket data\n"
+            assert captured.out == (
+                "/create: ['TRANSITION', 'ASSIGNMENT', 'CREATE', 'COMMENT']\n"
+                "Create function called with ticket data\n"
+            )
+
 
 class ExceptionMockHandler:
     """ A mock handler class. """
@@ -441,20 +458,23 @@ def test_comment_exception_handling(mi1, mi2, mi3):
 )
 def test_jira_hook_exception_handling(mi1, mi2):
     """ Test handling of exceptions in jira_hook event. """
+    mock_request = mock.MagicMock()
+    mock_request.json = {}
     with patch.object(
             app,
             'initialise',
             return_value=ExceptionMockHandler()):
-        with patch.object(
-                app.shared_sd,
-                'trigger_is_assignment',
-                return_value=(False, None, None)
-                ):
+        with mock.patch('app.request', mock_request):
             with patch.object(
                     app.shared_sd,
-                    'trigger_is_transition',
-                    return_value=(True, "status_from", "status_to")
-                ):
-                app.jira_hook()
+                    'trigger_is_assignment',
+                    return_value=(False, None)
+                    ):
+                with patch.object(
+                        app.shared_sd,
+                        'trigger_is_transition',
+                        return_value=(True, None)
+                    ):
+                    app.jira_hook()
     assert mi1.called is True
     assert mi2.called is True
