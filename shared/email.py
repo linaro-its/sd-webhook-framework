@@ -75,9 +75,9 @@ def send_email_via_smtp(msg):
         session.starttls(context=context)
     if user is not None:
         session.login(user, password)
-    recipients = [msg['To']]
+    recipients = [x.strip() for x in msg['To'].split(',')]
     if msg['Cc'] is not None:
-        recipients = recipients + msg['Cc'].split(",")
+        recipients = recipients + [x.strip() for x in msg['Cc'].split(',')]
     session.sendmail(
         msg["From"],
         recipients,
