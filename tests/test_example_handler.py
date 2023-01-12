@@ -20,13 +20,13 @@ def test_comment(capsys):
 
 def test_transition(capsys):
     """ Test the transition function. """
-    handler.transition("status_from", "status_to", None)
+    handler.transition("status_to", None)
     captured = capsys.readouterr()
-    assert captured.out == "Transition from status_from to status_to\n"
+    assert captured.out == "Transition to status_to\n"
 
 
 def test_assignment(capsys):
     """ Test the assignment function. """
-    handler.assignment("assign_from", "assign_to", None)
+    handler.assignment("assignee_to", None)
     captured = capsys.readouterr()
-    assert captured.out == "Assigned from assign_from to assign_to\n"
+    assert captured.out == "Assigned to assignee_to\n"
