@@ -333,9 +333,7 @@ def test_ticket_request_type_1(mock_get_cf_id):
 def test_ticket_request_type_2(mock_get_cf_id):
     """ Test handling of malformed issue. """
     data = {
-        "issue": {
-            "fields": {}
-        }
+        "fields": {}
     }
     with pytest.raises(shared_sd.MalformedIssueError):
         shared_sd.ticket_request_type(data)
@@ -348,13 +346,11 @@ def test_ticket_request_type_2(mock_get_cf_id):
 )
 def test_ticket_request_type_3(mock_get_cf_id):
     """ Test handling of custom fields in request type. """
-    data = {
-        "issue": {
-            "fields": {
-                "customfield_10100": {
-                    "requestType": {
-                        "id": "206",
-                    }
+    data =  {
+        "fields": {
+            10100: {
+                "requestType": {
+                    "id": "206",
                 }
             }
         }
@@ -421,9 +417,8 @@ def test_trigger_is_assignment():
             ]
         }
     }
-    match, t_from, t_to = shared_sd.trigger_is_assignment(data)
+    match, t_to = shared_sd.trigger_is_assignment(data)
     assert match is True
-    assert t_from == "from"
     assert t_to == "to"
 
 
@@ -445,9 +440,8 @@ def test_trigger_is_transition():
             ]
         }
     }
-    match, t_from, t_to = shared_sd.trigger_is_transition(data)
+    match, t_to = shared_sd.trigger_is_transition(data)
     assert match is True
-    assert t_from == "fromString"
     assert t_to == "toString"
 
 
@@ -458,14 +452,14 @@ def test_look_for_trigger():
         "issue_event_type_name": "issue_generic"
     }
     with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.look_for_trigger(None, data, None, None)
+        shared_sd.look_for_trigger(None, data, None)
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
         "changelog": {}
     }
     with pytest.raises(shared_sd.MalformedIssueError):
-        shared_sd.look_for_trigger(None, data, None, None)
+        shared_sd.look_for_trigger(None, data, None)
     data = {
         "webhookEvent": "jira:issue_updated",
         "issue_event_type_name": "issue_generic",
@@ -482,13 +476,11 @@ def test_look_for_trigger():
             ]
         }
     }
-    match, t_from, t_to = shared_sd.look_for_trigger("test", data, "from", "to")
+    match, t_to = shared_sd.look_for_trigger("test", data, "to")
     assert match is True
-    assert t_from == "from"
     assert t_to == "to"
-    match, t_from, t_to = shared_sd.look_for_trigger("fail", data, None, None)
+    match, t_to = shared_sd.look_for_trigger("fail", data, None)
     assert match is False
-    assert t_from is None
     assert t_to is None
 
 
@@ -504,6 +496,11 @@ def test_automation_triggered_comment():
         "comment": {
             "author": {
                 "name": shared.globals.CONFIGURATION["bot_name"]
+            }
+        },
+        "fields": {
+            "comment": {
+                "comments": "test comment"
             }
         }
     }
@@ -551,10 +548,8 @@ def test_get_field():
     """ Test get_field. """
     assert shared_sd.get_field({}, "fred") is None
     ticket_data = {
-        "issue": {
-            "fields": {
-                "customfield_123": "My value"
-            }
+        "fields": {
+            "123": "My value"
         }
     }
     result = shared_sd.get_field(ticket_data, "123")
@@ -565,11 +560,9 @@ def test_reporter_email_address():
     """ Test reporter_email_address. """
     assert shared_sd.reporter_email_address({}) is None
     ticket_data = {
-        "issue": {
-            "fields": {
-                "reporter": {
-                    "emailAddress": "My value"
-                }
+        "fields": {
+            "reporter": {
+                "emailAddress": "My value"
             }
         }
     }
