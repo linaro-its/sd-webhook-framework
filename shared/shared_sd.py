@@ -160,12 +160,16 @@ def save_ticket_data_as_attachment(ticket_data):
 def automation_triggered_comment(ticket_data):
     """ Try to determine if we (the automation) triggered the last comment. """
     comments = None
+    last_comment = None
     if "comment" in ticket_data:
-        comments = ticket_data["comment"]
-    elif "comment" in ticket_data["fields"]:
+        last_comment = ticket_data["comment"]
+    elif "fields" in ticket_data and \
+        "comment" in ticket_data["fields"] and \
+        "comments" in ticket_data["fields"]["comment"]:
         comments = ticket_data["fields"]["comment"]["comments"]
-    if comments is not None:
+    if last_comment is None and comments is not None and type(comments) is list:
         last_comment = comments[-1]
+    if last_comment is not None and "author" in last_comment:
         return user_is_bot(last_comment["author"])
     return False
 
