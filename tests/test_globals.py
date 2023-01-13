@@ -67,6 +67,9 @@ def test_initialise_shared_sd():
             "fields": {
                 "project": {
                     "key": "ITS"
+                },
+                "reporter": {
+                    "emailAddress": "foo@foo.com"
                 }
             }
         }
@@ -79,13 +82,11 @@ def test_initialise_shared_sd():
 
 def test_validate_cf_config():
     """ Test validate_cf_config """
-    shared.globals.CONFIGURATION = {
-        "cf_use_plugin_api": True
-    }
+    shared.globals.CONFIGURATION = {}
     with pytest.raises(shared.globals.MissingCFConfig):
         shared.globals.validate_cf_config()
     shared.globals.CONFIGURATION = {
-        "cf_use_plugin_api": True,
+        "cf_use_server_api": True,
         "cf_use_cloud_api": False
     }
     # This should pass the validation because we now default the
@@ -159,7 +160,7 @@ def test_initialise_config():
     with patch("builtins.open", mock_open(
             read_data=''
     )):
-        with pytest.raises(json.decoder.JSONDecodeError):
+        with pytest.raises(shared.globals.MalformedJSON):
             shared.globals.initialise_config()
     # Check that we get the various missing config errors.
     with patch("builtins.open", mock_open(
@@ -169,7 +170,7 @@ def test_initialise_config():
             shared.globals.initialise_config()
     # Test a valid config as we've checked everything else already.
     data = {
-        "cf_use_plugin_api": True,
+        "cf_use_server_api": True,
         "cf_use_cloud_api": False,
         "bot_name": "Fred",
         "vault_bot_name": "Fred",
@@ -201,7 +202,7 @@ def test_simple_credentials():
 
 
 @mock.patch(
-    'shared.globals.vault_auth.get_secret',
+    'shared.shared_vault.vault_auth.get_secret',
     return_value={
         "data": {
             "pw": "vault_password"
@@ -232,6 +233,10 @@ def test_vault_credentials(mock_get_secret):
 def test_get_sd_auth(mock_sd_auth_credentials):
     """ Check that get_sd_auth returns a valid HTTPBasicAuth. """
     shared.globals.SD_AUTH = None
+    shared.globals.CONFIGURATION = {
+        "bot_password": "password",
+        "bot_name": "name"
+        }
     shared.globals.initialise_sd_auth()
     compare = HTTPBasicAuth("name", "password")
     assert shared.globals.SD_AUTH == compare
@@ -239,7 +244,7 @@ def test_get_sd_auth(mock_sd_auth_credentials):
 
 
 @mock.patch(
-    'shared.globals.vault_auth.get_secret',
+    'shared.shared_vault.vault_auth.get_secret',
     return_value={
         "data": {
             "pw": "vault_password"
@@ -284,7 +289,7 @@ def test_config():
 
 
 @mock.patch(
-    'shared.globals.vault_auth.get_secret',
+    'shared.shared_vault.vault_auth.get_secret',
     return_value={
         "data": {
             "pw": "vault_password"
