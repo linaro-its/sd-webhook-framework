@@ -495,12 +495,19 @@ def test_automation_triggered_comment():
     data = {
         "comment": {
             "author": {
-                "name": shared.globals.CONFIGURATION["bot_name"]
+                "emailAddress": shared.globals.CONFIGURATION["bot_name"]
             }
         },
         "fields": {
             "comment": {
-                "comments": "test comment"
+                "comments": [
+                    {
+                        "body": "test comment",
+                        "author": {
+                            "emailAddress": shared.globals.CONFIGURATION["bot_name"]
+                        }
+                    }
+                ]
             }
         }
     }
