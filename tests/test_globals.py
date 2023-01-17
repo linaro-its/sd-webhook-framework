@@ -231,17 +231,15 @@ def test_vault_credentials(mock_get_secret):
     autospec=True
 )
 def test_get_sd_auth(mock_sd_auth_credentials):
-    """ Check that get_sd_auth returns a valid HTTPBasicAuth. """
+    """ Check that get_sd_auth returns a valid credential. """
     shared.globals.SD_AUTH = None
     shared.globals.CONFIGURATION = {
         "bot_password": "password",
         "bot_name": "name"
         }
     shared.globals.initialise_sd_auth()
-    compare = HTTPBasicAuth("name", "password")
-    assert shared.globals.SD_AUTH == compare
+    assert shared.globals.SD_AUTH == "bmFtZTpwYXNzd29yZA=="
     assert mock_sd_auth_credentials.called is True
-
 
 @mock.patch(
     'shared.shared_vault.vault_auth.get_secret',
