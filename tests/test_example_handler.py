@@ -30,3 +30,17 @@ def test_assignment(capsys):
     handler.assignment("assignee_to", None)
     captured = capsys.readouterr()
     assert captured.out == "Assigned to assignee_to\n"
+
+
+def test_org_change(capsys):
+    """ Test Org change function. """
+    handler.org_change(None)
+    captured = capsys.readouterr()
+    assert captured.out == "Org change function has been called\n"
+
+
+def test_jira_hook(capsys):
+    """ Test jira hook function. """
+    handler.jira_hook(None)
+    captured = capsys.readouterr()
+    assert captured.out == "Jira hook function has been called\n"
