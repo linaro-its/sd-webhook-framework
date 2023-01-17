@@ -8,10 +8,12 @@ mock = "*"
 pytest = "*"
 coverage = "*"
 pytest-cov = "*"
-responses = "*"
 safety = "*"
 pylint = "*"
 rope = "*"
+requests-mock = "*"
+responses = "*"
+moto = "*"
 
 [packages]
 httplib2 = ">=0.19.0" # Fixes CV"-2021-21240
@@ -25,6 +27,4 @@ unidecode = "*"
 sentry-sdk = {extras = ["flask"], version = "*"}
 google-api-python-client = "*"
 paramiko = "*"
-requests-mock = "*"
-responses = "*"
 vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
