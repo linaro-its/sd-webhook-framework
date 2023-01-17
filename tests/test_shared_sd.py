@@ -543,7 +543,7 @@ def test_save_ticket_data_as_attachment_2(
     data = {
         "comment": {
             "author": {
-                "name": shared.globals.CONFIGURATION["bot_name"]
+                "emailAddress": shared.globals.CONFIGURATION["bot_name"]
             }
         }
     }
