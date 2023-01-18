@@ -47,12 +47,47 @@ def test_cleanup_if_gmail():
 
 class MockLDAP3Value: # pylint: disable=too-few-public-methods
     """ Mock up a way of storing attribute values. """
-    value = None
+    def __init__(self) -> None:
+        self._value = None
+
+    @property
+    def value(self):
+        return self._value
+    
+    @value.setter
+    def value(self, v):
+        self._value = v
+
 
 class MockLDAP3Entry: # pylint: disable=too-few-public-methods
     """ Mock up the Entry class. """
-    entry_dn = None
-    uidNumber = MockLDAP3Value()
+    def __init__(self) -> None:
+        self._entry_dn = None
+        self._uidNumber = MockLDAP3Value()
+
+    @property
+    def entry_dn(self):
+        return self._entry_dn
+    
+    @entry_dn.setter
+    def entry_dn(self, v):
+        self._entry_dn = v
+
+    @property
+    def uidNumber(self):
+        return self._uidNumber
+    
+    @uidNumber.setter
+    def uidNumber(self, v):
+        self._uidNumber = v
+
+    def __getitem__(self, i):
+        if i == "entry_dn":
+            return self._entry_dn
+        if i == "uidNumber":
+            return self._uidNumber
+        raise Exception(f"Attribute {i} not found")
+
 
 class MockLDAP3Info: # pylint: disable=too-few-public-methods
     """ Mock up the Info class. """
@@ -118,6 +153,7 @@ class MockLDAP3Connection: # pylint: disable=too-few-public-methods
         _ = object_class
         _ = controls
         assert ldap_dn == "uid=fred.flintstone,base_dn"
+        assert attributes is not None
         assert attributes["cn"] == "fred.flintstone@widget.org"
         assert attributes["homeDirectory"] == "/home/fred.flintstone"
         assert attributes["sn"] == b"Flintstone"
