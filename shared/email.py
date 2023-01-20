@@ -68,8 +68,7 @@ def send_email_via_smtp(msg):
     #
     session = smtplib.SMTP(server, port=port)
     if ssl_required:
-        # only TLSv1 or higher
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         # starttls now raises an exception itself if the
         # response code is not 220
         session.starttls(context=context)
