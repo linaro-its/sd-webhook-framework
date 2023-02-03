@@ -316,6 +316,7 @@ def test_get_next_uid_number(mi1):
     assert mi1.called is True
 
 
+
 def mock_get_best_uid(connection, uid):
     """
     Mock get_best_uid to just return the uid we're passed.
@@ -346,6 +347,8 @@ def test_create_account(mi1, mi2):
     shared.globals.CONFIGURATION = {}
     shared_ldap.CONNECTION.add_result = True
     shared_ldap.create_account("Fred", "Flintstone", "fred.flintstone@widget.org")
+    # Create user acoount with passowrd.
+    shared_ldap.create_account("Fred", "Flintstone", "fred.flintstone@widget.org", "password")
     # Fake a failure to create the account to ensure that all of the
     # create_account code is tested.
     shared_ldap.CONNECTION.add_result = False
@@ -441,11 +444,21 @@ def test_add_to_mailing_group(mi1):
     "shared.shared_ldap.add_to_mailing_group",
     autospec=True
 )
-def test_add_to_group(mi1, mi2):
+def test_add_to_group_1(mi1, mi2):
     """ Test add_to_group. """
     shared_ldap.add_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
     assert mi1.called is True
     assert mi2.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.add_to_mailing_group",
+    autospec=True
+)
+def test_add_to_group_2(mi1):
+    """ Test add_to_group. """
+    shared_ldap.add_to_group("group_name", "cn=foo.bar,ou=accounts,base_dn")
+    assert mi1.called is True
 
 
 def mock_parameterised_member_of_group_test(
@@ -474,3 +487,27 @@ def test_is_dn_in_group(mi1):
     result = shared_ldap.is_dn_in_group("mock_test_group_name", "uid=fred.flintstone,ou=accounts,base_dn")
     assert result is True
     assert mi1.called is True
+
+
+# @mock.patch(
+#     "shared.shared_ldap.parameterised_add_to_group",
+#     autospec=True
+# )
+# def test_add_owner_to_group_1(mi1):
+#     """ Test add_owner_to_group. """
+#     shared_ldap.add_owner_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
+#     assert mi1.called is True
+
+
+# @mock.patch(
+#     'shared.shared_ldap.get_object',
+#     autospec=True,
+#     return_value = {
+#         "manager": "someone"
+#     }
+# )
+# def test_get_manager_from_dn(mi1):
+#     """ Test get_manager_from_dn"""
+#     shared_ldap.get_manager_from_dn("foo.bar")
+#     assert mi1.called is True
+#     # assert return_value == "foo@mock.com"
