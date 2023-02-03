@@ -5,7 +5,6 @@ import json
 from unittest.mock import patch, mock_open
 import mock
 import pytest
-from requests.auth import HTTPBasicAuth
 import shared.globals
 
 
@@ -17,7 +16,7 @@ def test_initialise_data():
 
 def test_initialise_shared_sd():
     """ Test initialise_shared_sd. """
-    shared.globals.TICKET_DATA = {}
+    shared.globals.TICKET_DATA = None
     with pytest.raises(shared.globals.MalformedIssueError):
         shared.globals.initialise_shared_sd()
     shared.globals.TICKET_DATA = {
@@ -54,7 +53,20 @@ def test_initialise_shared_sd():
             "self": "self",
             "key": "key",
             "fields": {
-                "project": {}
+                "project": {},
+            }
+        }
+    }
+    with pytest.raises(shared.globals.MalformedIssueError):
+        shared.globals.initialise_shared_sd()
+    shared.globals.TICKET_DATA = {
+        "issue": {
+            "self": "self",
+            "key": "key",
+            "fields": {
+                "project": {
+                    "key": "something"
+                },
             }
         }
     }
@@ -80,19 +92,33 @@ def test_initialise_shared_sd():
     assert shared.globals.PROJECT == "ITS"
 
 
-def test_validate_cf_config():
+def test_validate_cf_config_1():
     """ Test validate_cf_config """
-    shared.globals.CONFIGURATION = {}
+    shared.globals.CONFIGURATION = {
+        "cf_use_cloud_api": True,
+    }
     with pytest.raises(shared.globals.MissingCFConfig):
         shared.globals.validate_cf_config()
+
+
+def test_validate_cf_config_2():
+    """ Test validate_cf_config """
     shared.globals.CONFIGURATION = {
         "cf_use_server_api": True,
-        "cf_use_cloud_api": False
     }
-    # This should pass the validation because we now default the
-    # cachefile name if it is missing from the config.
-    shared.globals.validate_cf_config()
+    with pytest.raises(shared.globals.MissingCFConfig):
+        shared.globals.validate_cf_config()
 
+
+def test_validate_cf_config_3():
+    """ Test validate_cf_config """
+    shared.globals.CONFIGURATION = {
+        "cf_use_server_api": True,
+        "cf_use_cloud_api": True
+    }
+    with pytest.raises(shared.globals.InvalidCFConfig):
+        shared.globals.validate_cf_config()
+ 
 
 def test_validate_user_password_config():
     """ Test various user/password combos. """
@@ -285,7 +311,6 @@ def test_config():
     assert shared.globals.config("foo") == "wibble"
 
 
-
 @mock.patch(
     'shared.shared_vault.vault_auth.get_secret',
     return_value={
@@ -320,3 +345,32 @@ def test_get_email_credentials(mi1):
     assert user == "mock_user"
     assert password == "vault_password"
     assert mi1.called is True
+
+
+@mock.patch(
+    'shared.globals.shared_vault.get_secret',
+    return_value= "{\"password\":\"secret\"}",
+    autospec=True
+)
+def test_get_google_credentials_1(mock_google_credentials):
+    """ Test get_google_credentials when vault_google_name
+    is in shared.globals.CONFIGURATION. """
+    shared.globals.CONFIGURATION = {
+        "vault_google_name": "foo",
+        "vault_iam_role": "foo",
+        "vault_server_url": "foo",
+    }
+    shared.globals.get_google_credentials()
+    assert mock_google_credentials.called is True
+
+
+def test_get_google_credentials_2():
+    """ Test get_google_credentials when google_json_file
+    is in shared.globals.CONFIGURATION. """
+    shared.globals.CONFIGURATION = {
+        "google_json_file": "secret"
+    }
+    with patch("builtins.open", mock_open(
+            read_data=json.dumps(shared.globals.CONFIGURATION)
+        )):
+            shared.globals.get_google_credentials()
