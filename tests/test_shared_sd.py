@@ -361,6 +361,23 @@ def test_ticket_request_type_3(mock_get_cf_id):
     assert result == "206"
 
 
+@mock.patch(
+    'shared.custom_fields.get',
+    return_value=10100
+)
+def test_ticket_request_type_4(mock_get_cf_id):
+    """ Test handling of custom fields in request type. """
+    data =  {
+        "fields": {
+            10100: None
+            }
+        }
+    # Stop pylint complaining we don't use the argument.
+    _ = mock_get_cf_id
+    result = shared_sd.ticket_request_type(data)
+    assert result == None
+
+
 def test_usable_ticket_data():
     """ Test various scenarios to see if the ticket data is usable. """
     result = shared_sd.usable_ticket_data({})
@@ -445,7 +462,7 @@ def test_trigger_is_transition():
     assert t_to == "toString"
 
 
-def test_look_for_trigger():
+def test_look_for_trigger_1():
     """ Test the code that determines the cause of the trigger. """
     data = {
         "webhookEvent": "jira:issue_updated",
@@ -484,7 +501,18 @@ def test_look_for_trigger():
     assert t_to is None
 
 
-def test_automation_triggered_comment():
+def test_look_for_trigger_2(capsys):
+    """ Test the code that determines the cause of the trigger. """
+    #  This code is for testing when a nonusable ticket data is passed.
+    data = {
+        "No_webhookEvent": "jira:issue_updated",
+    }
+    shared_sd.look_for_trigger("test", data, "to")
+    captured = capsys.readouterr()
+    assert captured.out == "No webhookEvent field in ticket data\nNo usable ticket data for Jira trigger\n"
+
+
+def test_automation_triggered_comment_1():
     """ Test the code that determines if the automation wrote the last comment. """
     result = shared_sd.automation_triggered_comment({})
     assert result is False
@@ -498,6 +526,29 @@ def test_automation_triggered_comment():
                 "emailAddress": shared.globals.CONFIGURATION["bot_name"]
             }
         },
+        "fields": {
+            "comment": {
+                "comments": [
+                    {
+                        "body": "test comment",
+                        "author": {
+                            "emailAddress": shared.globals.CONFIGURATION["bot_name"]
+                        }
+                    }
+                ]
+            }
+        }
+    }
+    result = shared_sd.automation_triggered_comment(data)
+    assert result is True
+
+
+def test_automation_triggered_comment_2():
+    """ Test the code that determines if the automation wrote the last comment. """
+    shared.globals.CONFIGURATION = {
+        "bot_name": "test_bot"
+    }
+    data = {
         "fields": {
             "comment": {
                 "comments": [
@@ -1025,3 +1076,153 @@ def test_central_comment_handler3(mi1, mi2, mi3):
     assert mi3.called is True
     assert comment == FAKE_COMMENT_2
     assert keyword == "private"
+
+
+@responses.activate
+def test_get_servicedesk_request_types_1():
+    """Test get_servicedesk_request_types when response code is 200 """
+    shared.globals.ROOT_URL = "https://mock-server"
+    project_id = "ITS"
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
+            shared.globals.ROOT_URL, project_id
+        ),
+        json={
+            "values":[
+                {
+                    "id": "1001",
+                    "name": "foo"
+                }
+            ]
+        },
+        status=200
+    )
+    result = shared_sd.get_servicedesk_request_types(project_id)
+    assert result["values"][0]["name"] == "foo"
+
+
+@responses.activate
+def test_get_servicedesk_request_types_2():
+    """Test get_servicedesk_request_types when response code is not 200 """
+    shared.globals.ROOT_URL = "https://mock-server"
+    project_id = "ITS"
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
+            shared.globals.ROOT_URL, project_id
+        ),
+        json={
+            "values":[
+                {
+                    "id": "1001",
+                    "name": "foo"
+                }
+            ]
+        },
+        status=400
+    )
+    result = shared_sd.get_servicedesk_request_types(project_id)
+    assert result == None
+
+
+def test_ticket_issue_type():
+    """Test ticket_issue_type"""
+    data = {
+        "fields": {
+            "issuetype": {
+                "name": "foo"
+            }
+        }
+    }
+    result = shared_sd.ticket_issue_type(data)
+    assert result == "foo"
+
+
+def test_get_user_field_1(capsys):
+    """Test get_user_field when user_blob is None"""
+    result = shared_sd.get_user_field(None, "foo")
+    captured = capsys.readouterr()
+    assert captured.out == "get_user_field: passed None as user blob\n"
+    assert result == None
+
+
+def test_get_user_field_2(capsys):
+    """Test get_user_field when field_name is not in user_blob"""
+    user_blob = {
+        "bar": "foo"
+    }
+    result = shared_sd.get_user_field(user_blob, "foo")
+    captured = capsys.readouterr()
+    assert captured.out == 'get_user_field: requested field foo is not in the blob\n{"bar": "foo"}\n'
+    assert result == None
+
+
+# @responses.activate
+# def test_get_user_field_3():
+#     """Test get_user_field when field_name is not in user_blob"""
+#     user_blob = {
+#         "self": "user",
+#         "foo": "test"
+#     }
+#     responses.add(
+#         responses.GET,
+#         "https://mock-server/",
+#         json={
+#             "values":[
+#                 {
+#                     "id": "1001",
+#                     "name": "foo"
+#                 }
+#             ]
+#         },
+#         status=200
+#     )
+#     result = shared_sd.get_user_field(user_blob, "foo")
+#     # assert result == True
+
+def test_get_assignee_field_1():
+    """Test the function when 'fields' not in ticket data"""
+    data = {}
+    result = shared_sd.get_assignee_field(data, "foo")
+    assert result == None
+
+
+def test_get_assignee_field_2():
+    """Test the function when 'assignee in ticket data"""
+    data = {
+        "fields": {
+            "assignee": {
+                "name": "some_assignee",
+                "field_name": "foo"
+            },
+        }
+    }
+    result = shared_sd.get_assignee_field(data, "field_name")
+    assert result == "foo"
+
+
+def test_assignee_email_address_1():
+    """Test to get assignee's email address"""
+    data = {
+        "fields": {
+            "assignee": {
+                "emailAddress": "test@test.com",
+            },
+        }
+    }
+    result = shared_sd.assignee_email_address(data)
+    assert result == "test@test.com"
+
+
+def test_assignee_email_address_2():
+    """Check when assignee is not in ticket data"""
+    data = {
+        "fields": {
+            "issuetype": {
+                "name": "foo"
+            }
+        }
+    }
+    result = shared_sd.assignee_email_address(data)
+    assert result == None
