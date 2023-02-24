@@ -720,13 +720,11 @@ def test_resolve_ticket(mi1, mi2, mi3):
     autospec=True
 )
 @responses.activate
-def test_assign_issue_to(mi1):
-    """ Test assign_issue_to. """
+def test_assign_issue_to_1(mi1):
+    """ Test assign_issue_to when the response
+    status code is non 204 """
     shared.globals.ROOT_URL = "https://mock-server"
     shared.globals.TICKET = "mock-ticket"
-    shared.globals.CONFIGURATION = {
-        "bot_name": "mock_bot"
-    }
     responses.add(
         responses.PUT,
         "https://mock-server/rest/api/2/issue/mock-ticket/assignee",
@@ -735,6 +733,53 @@ def test_assign_issue_to(mi1):
     )
     shared_sd.assign_issue_to("mock-user")
     assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)    
+@mock.patch(
+    'shared.shared_sd.assign_issue_to_account_id',
+    autospec=True
+)
+@responses.activate
+def test_assign_issue_to_2(mi1, mi2):
+    """ Test assign_issue_to when the response
+    ststus code is 400 AND the error message
+    contains the GDPR error"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/api/2/issue/mock-ticket/assignee",
+        json={
+            "errorMessages": [
+                ("'accountId' must be the only user"
+                " identifying query parameter in GDPR strict mode."
+                )
+            ]
+        },
+        status=400,
+        content_type='application/json'
+    )
+    shared_sd.assign_issue_to("mock-user")
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@responses.activate
+def test_assign_issue_to_3():
+    """ Test assign_issue_to when the response
+    status code is 204 """
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/api/2/issue/mock-ticket/assignee",
+        status=204,
+    )
+    shared_sd.assign_issue_to("mock-user")
 
 
 @mock.patch(
@@ -814,7 +859,7 @@ def test_find_transition_failure2(mi1, mi2):
 
 
 @responses.activate
-def test_get_current_status():
+def test_get_current_status_1():
     """ Test get_current_status. """
     shared.globals.ROOT_URL = "https://mock-server"
     shared.globals.TICKET = "mock-ticket"
@@ -831,6 +876,21 @@ def test_get_current_status():
         status=200
     )
     assert shared_sd.get_current_status() == "mock-current-status"
+
+
+@responses.activate
+def test_get_current_status_2():
+    """ Test get_current_status when return code is non 200."""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/api/2/issue/mock-ticket?fields=status",
+        json={},
+        status=400
+    )
+    assert shared_sd.get_current_status() == None
+
 
 @mock.patch(
     'shared.shared_sd.get_current_status',
@@ -886,7 +946,7 @@ def test_get_keyword_from_comment():
     assert shared_sd.get_keyword_from_comment(comment) == "retry"
 
 @responses.activate
-def test_get_latest_comment():
+def test_get_latest_comment_1():
     """ Test get_latest_comment """
     shared.globals.ROOT_URL = "https://mock-server"
     shared.globals.TICKET = "mock-ticket"
@@ -928,6 +988,29 @@ def test_get_latest_comment():
 
     assert shared_sd.get_latest_comment() is None
     assert shared_sd.get_latest_comment() == "four"
+
+
+@responses.activate
+def test_get_latest_comment_2():
+    """ Test get_latest_comment 
+    when values are empty"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "mock-ticket"
+    first_blob = {
+        "isLastPage": True,
+        "values": [],
+        "size": 2
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/mock-ticket/comment?start=0",
+        body=json.dumps(first_blob),
+        status=200,
+        content_type='application/json'
+    )
+    result = shared_sd.get_latest_comment()
+    assert result == None
+
 
 FAKE_COMMENT_1 = {
         "author": {
@@ -1078,6 +1161,32 @@ def test_central_comment_handler3(mi1, mi2, mi3):
     assert keyword == "private"
 
 
+@mock.patch(
+    "shared.shared_sd.get_current_status",
+    return_value=None,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_keyword_from_comment",
+    return_value="private",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_sd.get_latest_comment",
+    return_value=FAKE_COMMENT_2,
+    autospec=True
+)
+def test_central_comment_handler4(mi1, mi2, mi3):
+    """ Test central_comment_handler
+    when ticket status is None """
+    result = shared_sd.central_comment_handler(
+        ["public"], ["private"])
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert result == (None, None)
+
+
 @responses.activate
 def test_get_servicedesk_request_types_1():
     """Test get_servicedesk_request_types when response code is 200 """
@@ -1150,36 +1259,87 @@ def test_get_user_field_1(capsys):
 def test_get_user_field_2(capsys):
     """Test get_user_field when field_name is not in user_blob"""
     user_blob = {
-        "bar": "foo"
+        "test_field": "bar"
     }
     result = shared_sd.get_user_field(user_blob, "foo")
     captured = capsys.readouterr()
-    assert captured.out == 'get_user_field: requested field foo is not in the blob\n{"bar": "foo"}\n'
+    assert captured.out == 'get_user_field: requested field foo is not in the blob\n{"test_field": "bar"}\n'
     assert result == None
 
 
-# @responses.activate
-# def test_get_user_field_3():
-#     """Test get_user_field when field_name is not in user_blob"""
-#     user_blob = {
-#         "self": "user",
-#         "foo": "test"
-#     }
-#     responses.add(
-#         responses.GET,
-#         "https://mock-server/",
-#         json={
-#             "values":[
-#                 {
-#                     "id": "1001",
-#                     "name": "foo"
-#                 }
-#             ]
-#         },
-#         status=200
-#     )
-#     result = shared_sd.get_user_field(user_blob, "foo")
-#     # assert result == True
+def test_get_user_field_3():
+    """Test get_user_field when field_name is in user_blob"""
+    user_blob = {
+        "self": "https://mock-server/rest/servicedeskapi/request/2000/comment/1000",
+        "foo": "test"
+    }
+    result = shared_sd.get_user_field(user_blob, "foo")
+    assert result == "test"
+
+
+@responses.activate
+def test_get_user_field_4(capsys):
+    """Test get_user_field when field_name value is None in user_blob
+    AND repsonse code is non 200"""
+    user_blob = {
+        "self": "https://mock-server/rest/servicedeskapi/request/",
+        "foo": None
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/",
+        json={"error": "not found"},
+        status=404
+    )
+    result = shared_sd.get_user_field(user_blob, "foo")
+    captured = capsys.readouterr()
+    assert captured.out == ("Got status 404 when querying"
+        " https://mock-server/rest/servicedeskapi/request/"
+        " for user field foo\n")
+    assert result == None
+
+
+@responses.activate
+def test_get_user_field_5():
+    """Test get_user_field when field_name value is None in user_blob
+    AND repsonse code is 200 AND field_name is in the result."""
+    user_blob = {
+        "self": "https://mock-server/rest/servicedeskapi/request/",
+        "foo": None
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/",
+        json={
+            'foo': 'bar'
+        },
+        status=200
+    )
+    result = shared_sd.get_user_field(user_blob, "foo")
+    assert result == "bar"
+
+
+@responses.activate
+def test_get_user_field_6(capsys):
+    """Test get_user_field when field_name value is None in user_blob
+    AND repsonse code is 200 AND field_name is not in the result."""
+    user_blob = {
+        "self": "https://mock-server/rest/servicedeskapi/request/",
+        "foo": None
+    }
+    responses.add(
+        responses.GET,
+        "https://mock-server/rest/servicedeskapi/request/",
+        json={
+            "bar": "foo"
+        },
+        status=200
+    )
+    result = shared_sd.get_user_field(user_blob, "foo")
+    captured = capsys.readouterr()
+    assert captured.out == 'get_user_field: \'foo\' not in the self data\n{"bar": "foo"}\n'
+    assert result == None
+
 
 def test_get_assignee_field_1():
     """Test the function when 'fields' not in ticket data"""
@@ -1226,3 +1386,974 @@ def test_assignee_email_address_2():
     }
     result = shared_sd.assignee_email_address(data)
     assert result == None
+
+
+@mock.patch(
+    'shared.shared_sd.urllib.parse.quote',
+    return_value="m%40ck_group",
+    autospec=True
+)
+@responses.activate
+def test_get_group_members_1(mi1, capsys):
+    """Test get_group_members when reponse code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/group/member?groupname=%s" % (
+        shared.globals.ROOT_URL, "m%40ck_group"),
+        json={},
+        status=404
+    )
+    result = shared_sd.get_group_members("m@ck_group")
+    captured = capsys.readouterr()
+    assert mi1.called is True
+    assert captured.out == (
+        "get_group_members(m@ck_group)"
+        " failed with error code 404\n")
+    assert result == []
+
+
+@mock.patch(
+    'shared.shared_sd.urllib.parse.quote',
+    return_value="m%40ck_group",
+    autospec=True
+)
+@responses.activate
+def test_get_group_members_2(mi1):
+    """Test get_group_members when reponse code is 200
+    AND 'isLast' is True"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/group/member?groupname=%s" % (
+        shared.globals.ROOT_URL, "m%40ck_group"),
+        json={
+            "values": [
+                {
+                    "name": "mock_user1"
+                },
+                {
+                    "name": "mock_user2"
+                }
+            ],
+            "isLast": True
+        },
+        status=200
+    )
+    result = shared_sd.get_group_members("m@ck_group")
+    assert mi1.called is True
+    assert result == ['mock_user1', 'mock_user2']
+
+
+@mock.patch(
+    'shared.shared_sd.urllib.parse.quote',
+    return_value="m%40ck_group",
+    autospec=True
+)
+@responses.activate
+def test_get_group_members_3(mi1):
+    """Test get_group_members when reponse code is 200
+    AND 'isLast' is False"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/group/member?groupname=%s" % (
+        shared.globals.ROOT_URL, "m%40ck_group"),
+        json={
+            "values": [
+                {
+                    "name": "mock_user1"
+                },
+                {
+                    "name": "mock_user2"
+                }
+            ],
+            "isLast": False,
+            "maxResults": 1
+        },
+        status=200
+    )
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/group/member?groupname=%s&startAt=1" % (
+        shared.globals.ROOT_URL, "m%40ck_group"),
+        json={
+            "values": [
+                {
+                    "name": "mock_user3"
+                },
+                {
+                    "name": "mock_user4"
+                }
+            ],
+            "isLast": True,
+        },
+        status=200
+    )
+    result = shared_sd.get_group_members("m@ck_group")
+    assert mi1.called is True
+    assert result == ['mock_user1', 'mock_user2', 'mock_user3', 'mock_user4']
+
+
+@responses.activate
+def test_groups_for_user_1():
+    """Test groups_for_user when the response code is 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    email_address = "user@mock.com"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/user?username=%s&expand=groups" % (
+            shared.globals.ROOT_URL, email_address
+        ),
+        json={
+            "groups":{
+                "items": [
+                    {
+                        "name": "foo"
+                    }
+                ]
+            }
+
+        },
+        status=200
+    )
+    result = shared_sd.groups_for_user(email_address)
+    assert result == ["foo"]
+
+
+@responses.activate
+def test_groups_for_user_2():
+    """Test groups_for_user when the response code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    email_address = "user@mock.com"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/user?username=%s&expand=groups" % (
+            shared.globals.ROOT_URL, email_address
+        ),
+        json={
+            "groups":{
+                "items": [
+                    {
+                        "name": "foo"
+                    }
+                ]
+            }
+
+        },
+        status=400
+    )
+    result = shared_sd.groups_for_user(email_address)
+    assert result == []
+
+
+@mock.patch(
+    'shared.shared_sd.get_servicedesk_id',
+    return_value=5,
+    autospec=True
+)
+@responses.activate
+def test_sd_orgs_1(mi1):
+    """Test sd_orgs when response code is 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.PROJECT = 5
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/servicedesk/%s/organization" % (
+            shared.globals.ROOT_URL, shared.globals.PROJECT
+        ),
+        json={
+            "values":[
+                {
+                    "name": "foo",
+                    "id": 5
+                },
+                {
+                    "name": "bar",
+                    "id": 6
+                }
+            ]
+        },
+        status=200
+    )
+    result = shared_sd.sd_orgs()
+    assert mi1.called is True
+    assert result == {'foo': 5, 'bar': 6}
+
+
+@mock.patch(
+    'shared.shared_sd.get_servicedesk_id',
+    return_value=5,
+    autospec=True
+)
+@responses.activate
+def test_sd_orgs_2(mi1):
+    """Test sd_orgs when response code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.PROJECT = 5
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/servicedesk/%s/organization" % (
+            shared.globals.ROOT_URL, shared.globals.PROJECT
+        ),
+        json={
+            "values":[
+                {
+                    "name": "foo",
+                    "id": 5
+                }
+            ]
+        },
+        status=400
+    )
+    result = shared_sd.sd_orgs()
+    assert mi1.called is True
+    assert result == {}
+
+
+@responses.activate
+def test_add_to_customfield_value_1(capsys):
+    """Test add_to_customfield_value
+    when response code is non 204"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    responses.add(
+        responses.PUT,
+        "%s/rest/api/2/issue/%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET
+        ),
+        json = {'error': 'not found'},
+        status=404
+    )
+    shared_sd.add_to_customfield_value("foo", "bar")
+    captured = capsys.readouterr()
+    assert captured.out == (
+        'Got status code 404 in add_to_customfield_value\n'
+        'Url: https://mock-server/rest/api/2/issue/Test_ticket\n'
+        '{"error": "not found"}\n'
+        '{"update": {"foo": [{"add": "bar"}]}}\n'
+    )
+    
+
+@responses.activate
+def test_add_to_customfield_value_2():
+    """Test add_to_customfield_value
+    when the response status code is 204"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    data = {
+        "update": {
+            "foo": [
+                {
+                    "add": "bar"
+                }
+            ]
+        }
+    }
+    responses.add(
+        responses.PUT,
+        "%s/rest/api/2/issue/%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET
+        ),
+        json = data,
+        status=204
+    )
+    shared_sd.add_to_customfield_value("foo", "bar")
+
+
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value="Needs approval",
+    autospec=True
+)
+def test_deassign_ticket_if_appropriate_1(mi1):
+    """Test deassign_ticket_if_appropriate
+    when ticket status is 'Needs approval' """
+    last_comment = {
+        "author": {
+            "emailAddress": "mock_user@mock.com"
+        }
+    }
+    result = shared_sd.deassign_ticket_if_appropriate(last_comment)
+    assert mi1.called is True
+    assert result == None
+
+
+@mock.patch(
+    'shared.shared_sd.user_is_bot',
+    return_value=True,
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value="Pending",
+    autospec=True
+)
+def test_deassign_ticket_if_appropriate_2(mi1, mi2):
+    """Test deassign_ticket_if_appropriate
+    when the latest comment is from
+    IT Support Bot """
+    shared.globals.CONFIGURATION = {
+        "bot_name": "bot@mock.com"
+    }
+    last_comment = {
+        "author": {
+            "emailAddress": "bot@mock.com"
+        }
+    }
+    result = shared_sd.deassign_ticket_if_appropriate(last_comment)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result == None
+
+
+@mock.patch(
+    'shared.shared_sd.assign_issue_to',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.user_is_bot',
+    side_effect=[None, True],
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value="Pending",
+    autospec=True
+)
+def test_deassign_ticket_if_appropriate_3(mi1, mi2, mi3):
+    """Test deassign_ticket_if_appropriate
+    when assignee is IT Suppot Bot AND
+    latest comment is from IT Suppot Bot
+    AND transition_to is None """
+    shared.globals.CONFIGURATION = {
+        "bot_name": "bot@mock.com"
+    }
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "assignee": {
+                "emailAddress": "bot@mock.com"
+            }
+        }
+    }
+
+    last_comment = {
+        "author": {
+            "emailAddress": "bot@mock.com"
+        }
+    }
+
+    shared_sd.deassign_ticket_if_appropriate(last_comment)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.transition_request_to',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.assign_issue_to',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.user_is_bot',
+    side_effect=[None, True],
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.get_current_status',
+    return_value="Pending",
+    autospec=True
+)
+def test_deassign_ticket_if_appropriate_4(mi1, mi2, mi3, mi4):
+    """Test deassign_ticket_if_appropriate
+    when assignee is IT Suppot Bot AND
+    latest comment is not from IT Suppot Bot
+    """
+    shared.globals.CONFIGURATION = {
+        "bot_name": "bot@mock.com"
+    }
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "assignee": {
+                "emailAddress": "bot@mock.com"
+            }
+        }
+    }
+
+    last_comment = {
+        "author": {
+            "emailAddress": "mock1_user@mock.com"
+        }
+    }
+
+    shared_sd.deassign_ticket_if_appropriate(last_comment, "foo")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
+    assert mi4.called is True
+
+
+@responses.activate
+def test_set_summary_1():
+    """Test set_summary"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "summary": "test"
+        }
+    }
+    responses.add(
+        responses.PUT,
+        "%s/rest/api/2/issue/%s" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET),
+        json={
+            "update": {
+                "summary": [
+                    {
+                        "set": "foo"
+                    }
+                ]
+            }
+        },
+        status=200,
+    )
+
+    shared_sd.set_summary("foo")
+    assert shared.globals.TICKET_DATA["fields"]["summary"] == "foo"
+
+
+@mock.patch(
+    'shared.shared_sd.is_request_participant',
+    return_value=True,
+    autospec=True
+)
+def test_add_request_participant_1(mi1):
+    """Test add_request_participant
+    when specified email address is
+    a request participant on the current issue"""
+    result = shared_sd.add_request_participant("mock@mock.com")
+    assert mi1.called is True
+    assert result == None
+
+
+@mock.patch(
+    'shared.shared_sd.is_request_participant',
+    return_value=False,
+    autospec=True,
+)
+@responses.activate
+def test_add_request_participant_2(mi1):
+    """Test add_request_participant when
+    specified email address is not a request participant
+    on the current issue AND the response status code is 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    update = {'usernames': ["mock@mock.com"]}
+    responses.add(
+        responses.POST,
+        "%s/rest/servicedeskapi/request/%s/participant" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET),
+        json = update,
+        status = 200,
+    )
+
+    shared_sd.add_request_participant("mock@mock.com")
+    assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True,
+)
+@mock.patch(
+    'shared.shared_sd.is_request_participant',
+    return_value=False,
+    autospec=True,
+)
+@responses.activate
+def test_add_request_participant_3(mi1, mi2):
+    """Test add_request_participant when
+    specified email address is not a request participant
+    on the current issue AND the response status code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    update = {'usernames': ["mock@mock.com"]}
+    responses.add(
+        responses.POST,
+        "%s/rest/servicedeskapi/request/%s/participant" % (
+            shared.globals.ROOT_URL, shared.globals.TICKET),
+        json = update,
+        status = 400,
+    )
+
+    shared_sd.add_request_participant("mock@mock.com")
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@responses.activate
+def test_is_request_participant_1():
+    """Test is_request_participant when response code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={},
+        status=400
+    )
+    result = shared_sd.is_request_participant("mock@mock.com")
+    assert result == False
+
+
+@responses.activate
+def test_is_request_participant_2():
+    """Test is_request_participant when response code is 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+        },
+        status=200
+    )
+    result = shared_sd.is_request_participant("mock@mock.com")
+    assert result == True
+
+
+@responses.activate
+def test_is_request_participant_3():
+    """Test is_request_participant when response code is 200
+    and when isLastPage is True"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+            "isLastPage": True
+        },
+        status=200
+    )
+    result = shared_sd.is_request_participant("mock1@mock.com")
+    assert result == False
+
+
+@responses.activate
+def test_is_request_participant_4():
+    """Test is_request_participant when response code is 200
+    and when isLastPage is False"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+            "isLastPage": False,
+            "size": 1
+        },
+        status=200
+    )
+
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            1
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+            "isLastPage": True,
+        },
+        status=200
+    )
+    result = shared_sd.is_request_participant("mock1@mock.com")
+    assert result == False
+
+
+@responses.activate
+def test_get_request_participants_1():
+    """Test get_request_participants when response code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={},
+        status=400
+    )
+    result = shared_sd.get_request_participants()
+    assert result == []
+
+
+@responses.activate
+def test_get_request_participants_2():
+    """Test get_request_participants when response code is 200
+    and isLastPage is True"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+            "isLastPage": True
+        },
+        status=200
+    )
+    result = shared_sd.get_request_participants()
+    assert result == ['mock@mock.com']
+
+
+@responses.activate
+def test_get_request_participants_3():
+    """Test get_request_participants when response code is 200
+    and isLastPage is False"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.TICKET = "Test_ticket"
+    start = 0
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            start
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock@mock.com"
+                }
+            ],
+            "isLastPage": False,
+            "size": 1
+        },
+        status=200
+    )
+
+    responses.add(
+        responses.GET,
+        "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
+            shared.globals.ROOT_URL,
+            shared.globals.TICKET,
+            1
+        ),
+        json={
+            "values": [
+                {
+                    "emailAddress": "mock1@mock.com"
+                }
+            ],
+            "isLastPage": True,
+        },
+        status=200
+    )
+
+    result = shared_sd.get_request_participants()
+    assert result == ['mock@mock.com', 'mock1@mock.com']
+
+
+@responses.activate
+def test_assign_issue_to_account_id_1():
+    """Test assign_issue_to_account_id
+    when the response status code is non 200"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.PROJECT = "mock_project"
+    data = {"error": "not found"}
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/user/assignable/multiProjectSearch"
+        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
+         "mock_user", shared.globals.PROJECT
+        ),
+        json=data,
+        status=404,
+        content_type="application/json"
+    )
+    result = shared_sd.assign_issue_to_account_id("mock_user")
+    assert result.json() == {'error': 'not found'}
+
+
+@responses.activate
+def test_assign_issue_to_account_id_2():
+    """Test assign_issue_to_account_id
+    when the response status code is 200
+    AND result.json() is an empty list"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.PROJECT = "mock_project"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/user/assignable/multiProjectSearch"
+        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
+         "mock_user", shared.globals.PROJECT
+        ),
+        json=[],
+        status=200,
+    )
+    result = shared_sd.assign_issue_to_account_id("mock_user")
+    assert result.json() == []
+
+
+@mock.patch(
+    'shared.shared_sd.service_desk_request_put',
+    autospec=True
+)
+@responses.activate
+def test_assign_issue_to_account_id_3(mi1):
+    """Test assign_issue_to_account_id
+    when the response status code is 200
+    AND result.json() is a non-empty list"""
+    shared.globals.ROOT_URL = "https://mock-server"
+    shared.globals.PROJECT = "mock_project"
+    responses.add(
+        responses.GET,
+        "%s/rest/api/2/user/assignable/multiProjectSearch"
+        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL,
+         "mock_user", shared.globals.PROJECT
+        ),
+        json=[
+            {
+                "accountId": "anonymous"
+            }
+        ],
+        status=200,
+    )
+    shared_sd.assign_issue_to_account_id("mock_user")
+    assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.shared_ldap.flatten_list',
+    return_value=["john.doe@mock.com", "tom.doe@mock.com"],
+    autospec=True
+)
+@responses.activate
+def test_assign_approvers_1(mi1):
+    """Test assign_approvers when
+    add_to_request_participants is False
+    AND when response code is 204"""
+    approver_list = ["john.doe@mock.com", "tom.doe@mock.com"]
+    shared.globals.TICKET = "Test_ticket"
+    shared.globals.TICKET_DATA = {
+        "self": "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field"
+    }
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field",
+        json={
+            "fields":{
+                "test_custom_field": [
+                    {
+                        "name": "john.doe@mock.com"
+                    },
+                    {
+                        "name": "tom.doe@mock.com"
+                    }
+                ]
+            }
+        },
+        status=204
+    )
+    shared_sd.assign_approvers(approver_list, "test_custom_field", False)
+    assert mi1.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.post_comment',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.shared_ldap.flatten_list',
+    return_value=["john.doe@mock.com", "tom.doe@mock.com"],
+    autospec=True
+)
+@responses.activate
+def test_assign_approvers_2(mi1, mi2):
+    """Test assign_approvers when
+    add_to_request_participants is False
+    AND when response code is non 204"""
+    approver_list = ["john.doe@mock.com", "tom.doe@mock.com"]
+    shared.globals.TICKET = "Test_ticket"
+    shared.globals.TICKET_DATA = {
+        "self": "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field"
+    }
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field",
+        json={
+            "fields":{
+                "test_custom_field": [
+                    {
+                        "name": "john.doe@mock.com"
+                    },
+                    {
+                        "name": "tom.doe@mock.com"
+                    }
+                ]
+            }
+        },
+        status=400
+    )
+    shared_sd.assign_approvers(approver_list, "test_custom_field", False)
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@mock.patch(
+    'shared.shared_sd.add_request_participant',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.shared_ldap.flatten_list',
+    return_value=["john.doe@mock.com", "tom.doe@mock.com"],
+    autospec=True
+)
+@responses.activate
+def test_assign_approvers_3(mi1, mi2):
+    """Test assign_approvers when
+    add_to_request_participants is True"""
+    approver_list = ["approver1@mock.com", "approver2@mock.com"]
+    shared.globals.TICKET = "Test_ticket"
+    shared.globals.TICKET_DATA = {
+        "self": "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field"
+    }
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field",
+        json={
+            "fields":{
+                "test_custom_field": [
+                    {
+                        "name": "john.doe@mock.com"
+                    },
+                    {
+                        "name": "tom.doe@mock.com"
+                    }
+                ]
+            }
+        },
+        status=204
+    )
+    shared_sd.assign_approvers(approver_list, "test_custom_field")
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+class MockMail:
+    """Mock Mail Object"""
+    def __init__(self):
+        self.value = "tom.doe@mock.com"
+
+class MockLDAPObject:
+    """Mock LDAP Object"""
+    def __init__(self):
+        self.mail = MockMail()
+
+
+@mock.patch(
+    'shared.shared_sd.shared_ldap.get_object',
+    return_value=MockLDAPObject(),
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.add_request_participant',
+    autospec=True
+)
+@mock.patch(
+    'shared.shared_sd.shared_ldap.flatten_list',
+    return_value=["john.doe@mock.com", "tom.doe"],
+    autospec=True
+)
+@responses.activate
+def test_assign_approvers_4(mi1, mi2, mi3):
+    """Test assign_approvers when
+    add_to_request_participants is True
+    AND when the approvers is a name instead of
+    email address """
+    approver_list = ["john.doe@mock.com", "tom.doe"]
+    shared.globals.TICKET = "Test_ticket"
+    shared.globals.TICKET_DATA = {
+        "self": "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field"
+    }
+    responses.add(
+        responses.PUT,
+        "https://mock-server/rest/servicedeskapi/request/Test_ticket/test_custom_field",
+        json={
+            "fields":{
+                "test_custom_field": [
+                    {
+                        "name": "john.doe@mock.com"
+                    },
+                    {
+                        "name": "tom.doe@mock.com"
+                    }
+                ]
+            }
+        },
+        status=204
+    )
+    shared_sd.assign_approvers(approver_list, "test_custom_field")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
