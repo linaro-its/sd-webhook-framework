@@ -489,25 +489,955 @@ def test_is_dn_in_group(mi1):
     assert mi1.called is True
 
 
+def mock_add_owner_to_mailing_group(
+        group_name,
+        add_dn):
+    """
+    A Mock add_owner_to_security_group to test
+    adding owner to a security group.
+    """
+    assert group_name == "mock_group"
+    assert add_dn == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+def mock_add_owner_to_security_group(
+        group_name,
+        add_dn):
+    """
+    A Mock add_owner_to_mailing_group to testing
+    adding owner to a mailing group.
+    """
+    assert group_name == "mock_group"
+    assert add_dn == "uid=fred.flintstone,ou=accounts,base_dn"
+
+@mock.patch(
+    "shared.shared_ldap.add_owner_to_mailing_group",
+    side_effct=mock_add_owner_to_mailing_group,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.add_owner_to_security_group",
+    side_effect=mock_add_owner_to_security_group,
+    autospec=True
+)
+def test_add_owner_to_group_1(mi1, mi2):
+    """ Test add_owner_to_group. """
+    shared_ldap.add_owner_to_group(
+        "mock_group", "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+def mock_is_dn_in_group(
+        group_name,
+        user_dn,
+        recurse=False):
+    """
+    A Mock is_dn_in_group to ckeck
+    id someone in a group.
+    """
+    assert group_name == "mock_group"
+    assert user_dn == "uid=fred.flintstone,ou=accounts,base_dn"
+    return True
+
+
+@mock.patch(
+    "shared.shared_ldap.is_dn_in_group",
+    side_effect=mock_is_dn_in_group,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.find_from_email",
+    return_value="uid=fred.flintstone,ou=accounts,base_dn",
+    autospec=True
+)
+def test_is_user_in_group_1(mi1, mi2):
+    """ Test is_user_in_group when 
+    the LDAP object exists. """
+    result = shared_ldap.is_user_in_group("mock_group", "fred.flintstone@widget.org")
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result == True
+
+
+def mock_parameterised_add_to_group_add_owner_sec_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_add_to_group to test
+    adding an owner to a security group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_security_groups"
+    assert member_attribute == "owner"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    side_effect=mock_parameterised_add_to_group_add_owner_sec_group,
+    autospec=True
+)
+def test_add_owner_to_security_group_1(mi1):
+    """Test add_owner_to_security_group. """
+    shared_ldap.add_owner_to_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    return_value=True,
+    autospec=True
+)
+def test_add_owner_to_security_group_2(mi1):
+    """Test add_owner_to_security_group if
+    DN is already an owner. """
+    result = shared_ldap.add_owner_to_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+def mock_parameterised_add_to_group_add_owner_mail_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_add_to_group to test
+    adding an owner to a mailing group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_mailing_groups"
+    assert member_attribute == "owner"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    side_effect=mock_parameterised_add_to_group_add_owner_mail_group,
+    autospec=True
+)
+def test_add_owner_to_mailing_group_1(mi1):
+    """Test add_owner_to_mailing_group. """
+    shared_ldap.add_owner_to_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_add_to_group",
+    return_value=True,
+    autospec=True
+)
+def test_add_owner_to_mailing_group_2(mi1):
+    """Test add_owner_to_mailing_group
+    if DN is already an owner. """
+    result = shared_ldap.add_owner_to_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+def mock_parameterised_remove_from_group_sec_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_remove_from_group to test
+    removing a user from a security group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_security_groups"
+    assert member_attribute == "memberUid"
+    assert member_value == "fred.flintstone"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    side_effect=mock_parameterised_remove_from_group_sec_group,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.extract_id_from_dn",
+    return_value="fred.flintstone",
+    autospec=True
+)
+def test_remove_from_security_group_1(mi1, mi2):
+    """Test remove_from_security_group. """
+    shared_ldap.remove_from_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    return_value=True,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.extract_id_from_dn",
+    return_value="fred.flintstone",
+    autospec=True
+)
+def test_remove_from_security_group_2(mi1, mi2):
+    """Test remove_from_security_group
+    when user is not a member of the security group. """
+    result = shared_ldap.remove_from_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result is True
+
+
+def mock_parameterised_remove_from_group_mailing_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_add_to_group to test
+    removing a user from mailing group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_mailing_groups"
+    assert member_attribute == "uniqueMember"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    side_effect=mock_parameterised_remove_from_group_mailing_group,
+    autospec=True
+)
+def test_remove_from_mailing_group_1(mi1):
+    """Test remove_from_mailing_group . """
+    shared_ldap.remove_from_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    return_value=True,
+    autospec=True
+)
+def test_remove_from_mailing_group_2(mi1):
+    """Test remove_from_mailing_group
+    when user is not a member of the mailing group."""
+    result = shared_ldap.remove_from_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+def mock_parameterised_remove_from_group_remove_owner_sec_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_add_to_group to test
+    removing an owner from a security group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_security_groups"
+    assert member_attribute == "owner"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    side_effect=mock_parameterised_remove_from_group_remove_owner_sec_group,
+    autospec=True
+)
+def test_remove_owner_from_security_group_1(mi1):
+    """Test remove_owner_from_security_group. """
+    shared_ldap.remove_owner_from_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    return_value=True,
+    autospec=True
+)
+def test_remove_owner_from_security_group_2(mi1):
+    """Test remove_owner_from_security_group
+    when user is the owner of the security group. """
+    result = shared_ldap.remove_owner_from_security_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+def mock_parameterised_remove_from_group_remove_owner_mailing_group(
+        group_name,
+        group_location_tag,
+        member_attribute,
+        member_value):
+    """
+    A mock parameterised_add_to_group to test
+    removing an owner from a mailing group.
+    """
+    assert group_name == "mock_group"
+    assert group_location_tag == "ldap_mailing_groups"
+    assert member_attribute == "owner"
+    assert member_value == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    side_effect=mock_parameterised_remove_from_group_remove_owner_mailing_group,
+    autospec=True
+)
+def test_remove_owner_from_mailing_group_1(mi1):
+    """Test remove_owner_from_mailing_group. """
+    shared_ldap.remove_owner_from_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.parameterised_remove_from_group",
+    return_value=True,
+    autospec=True
+)
+def test_remove_owner_from_mailing_group_2(mi1):
+    """Test remove_owner_from_mailing_group
+    when user is the owner of the security group."""
+    result = shared_ldap.remove_owner_from_mailing_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+def mock_remove_from_security_group(
+        group_name,
+        object_dn):
+    """
+    A mock remove_from_security_group to test
+    removing a DN from a security group.
+    """
+    assert group_name == "mock_group"
+    assert object_dn == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+def mock_remove_from_mailing_group_test_1(
+        group_name,
+        object_dn):
+    """
+    A mock remove_from_security_group to test
+    removing a DN from a mailing group.
+    """
+    assert group_name == "mock_group"
+    assert object_dn == "uid=fred.flintstone,ou=accounts,base_dn"
+
+@mock.patch(
+    "shared.shared_ldap.remove_from_mailing_group",
+    side_effect = mock_remove_from_mailing_group_test_1,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.remove_from_security_group",
+    side_effect = mock_remove_from_security_group,
+    autospec=True
+)
+def test_remove_from_group_1(mi1, mi2):
+    """
+    Test remove_from_group to test removing a DN
+    from both security and mailing groups.
+    """
+    shared_ldap.remove_from_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+def mock_remove_from_mailing_group_test_2(
+        group_name,
+        object_dn):
+    """
+    A mock remove_from_security_group to test
+    removing a DN from a mailing group.
+    """
+    assert group_name == "mock_mail_group"
+    assert object_dn == "cn=mock_mail_group,ou=groups,base_dn"
+
+
+@mock.patch(
+    "shared.shared_ldap.remove_from_mailing_group",
+    side_effect = mock_remove_from_mailing_group_test_2,
+    autospec=True
+)
+def test_remove_from_group_2(mi1):
+    """
+    Test remove_from_group if the DN is a mailing group.
+    """
+    shared_ldap.remove_from_group(
+        "mock_mail_group",
+        "cn=mock_mail_group,ou=groups,base_dn"
+    )
+    assert mi1.called is True
+
+
+@mock.patch(
+    "shared.shared_ldap.remove_from_mailing_group",
+    return_value=True,
+    autospec=True
+)
+
+def test_remove_from_group_3(mi1):
+    """
+    Test remove_from_group when DN is not a 
+    member of both security and mailing group.
+    """
+    result = shared_ldap.remove_from_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert result is True
+
+
+@mock.patch(
+    "shared.shared_ldap.remove_owner_from_mailing_group",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.remove_owner_from_security_group",
+    autospec=True
+)
+def test_remove_owner_from_group_1(mi1, mi2):
+    """Test remove_owner_from_group """
+    shared_ldap.remove_owner_from_group(
+        "mock_group",
+        "uid=fred.flintstone,ou=accounts,base_dn"
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+
+
+def test_flatten_list_1():
+    """Test flatten_list when ldap_enabled is False"""
+    shared.globals.CONFIGURATION = {
+        "ldap_enabled": False
+    }
+    starting_list = [
+        "cn=mock_group,ou=mailing,base_dn"
+    ]
+    result = shared_ldap.flatten_list(starting_list)
+    assert result == ['cn=mock_group,ou=mailing,base_dn']
+
+
+def test_flatten_list_2():
+    """Test flatten_list when ldap_enabled is None"""
+    shared.globals.CONFIGURATION = {
+        "ldap_enabled": None
+    }
+    starting_list = [
+        "cn=mock_group,ou=mailing,base_dn"
+    ]
+    result = shared_ldap.flatten_list(starting_list)
+    assert result == ['cn=mock_group,ou=mailing,base_dn']
+
+
+def test_flatten_list_3():
+    """Test flatten_list when starting_list is empty. """
+    shared.globals.CONFIGURATION = {
+        "ldap_enabled": True
+    }
+    starting_list = []
+    result = shared_ldap.flatten_list(starting_list)
+    assert result == []
+
+
+@mock.patch(
+    "shared.shared_ldap.process_list_member",
+    autospec=True,
+)
+def test_flatten_list_4(mi1):
+    """Test flatten_list when ldap_enabled is True
+    and starting_list is not empty.
+    """
+    shared.globals.CONFIGURATION = {
+        "ldap_enabled": True
+    }
+    expected_results=[
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "uid=alf.flintstone,ou=accounts,base_dn"
+    ]
+
+    starting_list = [
+        "cn=mock_group1,ou=mailing,base_dn",
+        "cn=mock_group2,ou=mailing,base_dn"
+    ]
+    result = shared_ldap.flatten_list(starting_list)
+    assert mi1.called is True
+    # assert result == expected_results
+
+
+def test_process_list_member_1():
+    """ Test process_list_member
+    when MAILING_OU is not in the item. """
+    result = []
+    item = "cn=mock_group1,ou=security,base_dn"
+    shared_ldap.process_list_member(item, result)
+    assert result == ["cn=mock_group1,ou=security,base_dn"]
+
+
+def test_process_list_member_2():
+    """ Test process_list_member
+    when MAILING_OU is not in the item
+    and result is not empty. """
+    expected_result=[
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "cn=mock_group1,ou=security,base_dn"
+    ]
+    result = ["uid=fred.flintstone,ou=accounts,base_dn"]
+    item = "cn=mock_group1,ou=security,base_dn"
+    shared_ldap.process_list_member(item, result)
+    assert result == expected_result
+
+
+@mock.patch(
+    "shared.shared_ldap.get_group_membership",
+    return_value=["uid=fred.flintstone,ou=accounts,base_dn"],
+    autospec=True,
+)
+@mock.patch(
+    "shared.shared_ldap.extract_id_from_dn",
+    return_value="mock_group1",
+    autospec=True
+)
+def test_process_list_member_3(mi1, mi2):
+    """ Test process_list_member
+    when MAILING_OU is in the item
+    and if the group member doesn't
+    exists in the result list. """
+    expected_result=["uid=fred.flintstone,ou=accounts,base_dn"]
+    result = []
+    item = "cn=mock_group1,ou=mailing,base_dn"
+    result == shared_ldap.process_list_member(item, result)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result == expected_result
+
+
+@mock.patch(
+    "shared.shared_ldap.get_group_membership",
+    return_value=["uid=fred.flintstone,ou=accounts,base_dn"],
+    autospec=True,
+)
+@mock.patch(
+    "shared.shared_ldap.extract_id_from_dn",
+    return_value="mock_group1",
+    autospec=True
+)
+def test_process_list_member_4(mi1, mi2):
+    """ Test process_list_member
+    when MAILING_OU is in the item
+    and if the group member already
+    exists in the result list. """
+    expected_result=["uid=fred.flintstone,ou=accounts,base_dn"]
+    result = ["uid=fred.flintstone,ou=accounts,base_dn"]
+    item = "cn=mock_group1,ou=mailing,base_dn"
+    result == shared_ldap.process_list_member(item, result)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result == expected_result
+
+
+@mock.patch(
+    "shared.shared_ldap.find_from_email",
+    return_value=None,
+    autospec=True
+)
+def test_reporter_is_group_owner_1(mi1):
+    """Test reporter_is_group_owner
+    when reporter DN doesn't exist. """
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "reporter": {
+                "emailAddress": "fred.flintstone@widget.org"
+            }
+        }
+    }
+    owner = ["uid=fred.flintstone,ou=accounts,base_dn"]
+    result = shared_ldap.reporter_is_group_owner(owner)
+    assert mi1.called is True
+    assert result is False
+
+
+@mock.patch(
+    "shared.shared_ldap.find_from_email",
+    return_value="uid=fred.flintstone,ou=accounts,base_dn",
+    autospec=True
+)
+def test_reporter_is_group_owner_2(mi1):
+    """Test reporter_is_group_owner
+    when reporter DN exists AND
+    the owner is not a Mailing Group. """
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "reporter": {
+                "emailAddress": "fred.flintstone@widget.org"
+            }
+        }
+    }
+    owner = ["uid=fred.flintstone,ou=accounts,base_dn"]
+    result = shared_ldap.reporter_is_group_owner(owner)
+    assert mi1.called is True
+    assert result is True
+
+
+@mock.patch(
+    "shared.shared_ldap.is_dn_in_group",
+    return_value=True,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.find_from_email",
+    return_value="cn=mock.group,ou=mailing,base_dn",
+    autospec=True
+)
+def test_reporter_is_group_owner_3(mi1, mi2):
+    """Test reporter_is_group_owner
+    when reporter DN exists AND
+    the owner is a Mailing Group. """
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "reporter": {
+                "emailAddress": "mock.group@widget.org"
+            }
+        }
+    }
+    owner = ["cn=mock.group,ou=mailing,base_dn"]
+    result = shared_ldap.reporter_is_group_owner(owner)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result is True
+
+
+@mock.patch(
+    "shared.shared_ldap.is_dn_in_group",
+    return_value=False,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.find_from_email",
+    return_value="cn=mock.group,ou=mailing,base_dn",
+    autospec=True
+)
+def test_reporter_is_group_owner_4(mi1, mi2):
+    """Test reporter_is_group_owner
+    when reporter DN exists AND
+    the owner is an empty Mailing Group. """
+    shared.globals.TICKET_DATA = {
+        "fields": {
+            "reporter": {
+                "emailAddress": "mock.group@widget.org"
+            }
+        }
+    }
+    owner = ["cn=mock.group,ou=mailing,base_dn"]
+    result = shared_ldap.reporter_is_group_owner(owner)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result is False
+
+
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    return_value=None,
+    autospec=True
+)
+def test_find_group_1(mi1):
+    """ Test find_group when group name has
+    '@' and 'google_enabled' is False"""
+    shared.globals.CONFIGURATION = {
+        "google_enabled": False
+    }
+    group_name = "mock.group@widget.org"
+    attribute = ["uniqueMember"]
+    result = shared_ldap.find_group(group_name, attribute)
+    assert mi1.called is True
+    assert result == ('mock.group@widget.org', [])
+
+
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    return_value=None,
+    autospec=True
+)
+def test_find_group_2(mi1):
+    """ Test find_group when group name
+    doesn't have '@'.  """
+    group_name = "mock.group"
+    attribute = ["uniqueMember"]
+    result = shared_ldap.find_group(group_name, attribute)
+    assert mi1.called is True
+    assert result == ('mock.group', [])
+
+
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    return_value=[],
+    autospec=True
+)
+def test_find_group_3(mi1):
+    """ Test find_group when group name
+    doesn't have '@'.  """
+    group_name = "mock.group"
+    attribute = ["uniqueMember"]
+    result = shared_ldap.find_group(group_name, attribute)
+    assert mi1.called is True
+    assert result == ('mock.group', [])
+
+
+@mock.patch(
+    "shared.shared_ldap.shared_google.check_group_alias",
+    return_value=None,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    return_value=[],
+    autospec=True
+)
+def test_find_group_4(mi1, mi2):
+    """ Test find_group when group name has
+    '@' AND 'google_enabled' is True AND
+    there is no aliases in Google. """
+    shared.globals.CONFIGURATION = {
+        "google_enabled": True
+    }
+    group_name = "mock.group@widget.org"
+    attribute = ["uniqueMember"]
+    result = shared_ldap.find_group(group_name, attribute)
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result == ('mock.group@widget.org', [])
+
+
 # @mock.patch(
-#     "shared.shared_ldap.parameterised_add_to_group",
+#     "shared.shared_ldap.shared_google.check_group_alias",
+#     return_value="mock.group_alias@widget.org",
 #     autospec=True
 # )
-# def test_add_owner_to_group_1(mi1):
-#     """ Test add_owner_to_group. """
-#     shared_ldap.add_owner_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
-#     assert mi1.called is True
-
-
 # @mock.patch(
-#     'shared.shared_ldap.get_object',
-#     autospec=True,
-#     return_value = {
-#         "manager": "someone"
-#     }
+#     "shared.shared_ldap.find_matching_objects",
+#     return_value=[],
+#     autospec=True
 # )
-# def test_get_manager_from_dn(mi1):
-#     """ Test get_manager_from_dn"""
-#     shared_ldap.get_manager_from_dn("foo.bar")
+# def test_find_group_5(mi1, mi2):
+#     """ Test find_group when group name has
+#     '@' AND 'google_enabled' is True AND
+#     there is aliases in Google. """
+#     shared.globals.CONFIGURATION = {
+#         "google_enabled": True
+#     }
+#     group_name = "mock.group@widget.org"
+#     attribute = ["uniqueMember"]
+#     result = shared_ldap.find_group(group_name, attribute)
 #     assert mi1.called is True
-#     # assert return_value == "foo@mock.com"
+#     assert mi2.called is True
+#     assert result == ('mock.group@widget.org', [])
+
+mock.patch(
+    "shared.shared_ldap.get_object",
+    return_value=None,
+    autospec=True
+)
+def test_get_manager_from_dn_1():   
+    """ Test get_manager_from_dn function
+    when get_object returns None """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert result is None
+
+
+class MockMailObject_2():
+    """ A Mock mail object. """
+    values = ["alf.flintstone@widget.org", "alf1.flintstone@widget.org"]
+
+
+class MockManagerObject_2:
+    """ A Mock manager object. """
+    value = "uid=alf.flintstone,ou=accounts,base_dn"
+    mail = MockMailObject_2()
+
+
+class MockGetObject_2():
+    """ A Mock object for querying manager. """
+    manager = MockManagerObject_2()
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_2, MockManagerObject_2],
+    autospec=True
+)
+def test_get_manager_from_dn_2(mi1):   
+    """ Test get_manager_from_dn function
+    when the staff has a manager attribute.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result == "alf.flintstone@widget.org"
+
+
+class MockGetObject_3():
+    """ A Mock object for querying manager. """
+    manager = None
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_3],
+    autospec=True
+)
+def test_get_manager_from_dn_3(mi1):
+    """ Test get_manager_from_dn function
+    when result.manager is None.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result is None
+
+
+class MockManagerObject_4:
+    """ A Mock manager object. """
+    value = None
+
+
+class MockGetObject_4():
+    """ A Mock object for querying manager. """
+    manager = MockManagerObject_4()
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_4, MockManagerObject_4],
+    autospec=True
+)
+def test_get_manager_from_dn_4(mi1):   
+    """ Test get_manager_from_dn function
+    when result.manager.value is None.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result is None
+
+
+class MockGetObject_5():
+    """ A Mock object for querying manager. """
+    manager = MockManagerObject_2()
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_5, None],
+    autospec=True
+)
+def test_get_manager_from_dn_5(mi1):   
+    """ Test get_manager_from_dn function
+    when calling get_object for manager is None.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result is None
+
+
+class MockManagerObject_6:
+    """ A Mock manager object. """
+    value = "uid=alf.flintstone,ou=accounts,base_dn"
+    mail = None
+
+
+class MockGetObject_6():
+    """ A Mock object for querying manager. """
+    manager = MockManagerObject_2()
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_6, MockManagerObject_6],
+    autospec=True
+)
+def test_get_manager_from_dn_6(mi1):   
+    """ Test get_manager_from_dn function
+    when the value of mgr_email.mail is None.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result is None
+
+
+class MockMailObject_7():
+    """ A Mock mail object. """
+    values = []
+
+
+class MockManagerObject_7:
+    """ A Mock manager object. """
+    value = "uid=alf.flintstone,ou=accounts,base_dn"
+    mail = MockMailObject_7()
+
+
+class MockGetObject_7():
+    """ A Mock object for querying manager. """
+    manager = MockManagerObject_7()
+
+    
+@mock.patch(
+    "shared.shared_ldap.get_object",
+    side_effect=[MockGetObject_7, MockManagerObject_7],
+    autospec=True
+)
+def test_get_manager_from_dn_7(mi1):   
+    """ Test get_manager_from_dn function
+    when mail.values is an empty List.
+    """
+    dn = "uid=fred.flintstone,ou=accounts,base_dn"
+    result = shared_ldap.get_manager_from_dn(dn)
+    assert mi1.called is True
+    assert result is None
