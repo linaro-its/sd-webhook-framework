@@ -1,6 +1,6 @@
 urllib3==1.25.10
 Jinja2==2.11.3
-requests==2.24.0
+requests==2.31.0
 Flask==1.1.2
 JSON-minify==0.3.0
 ldap3==2.8.1
