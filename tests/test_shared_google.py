@@ -5,6 +5,7 @@ import shared.globals
 import mock
 
 def mock_json_blob_test(json_blob, scopes):
+    """ A mock json blob. """
     assert json_blob == "{\'password\":\"secret\'}"
     assert scopes == [
     'https://www.googleapis.com/auth/admin.directory.user.security',
@@ -38,14 +39,3 @@ def test_check_group_alias_1():
     shared.globals.CONFIGURATION = {}
     result = shared_google.check_group_alias("mock@mock.com")
     assert result is None
-
-
-# def test_check_group_alias_2(mi1):
-#     """Test check_group_alias"""
-#     # Check when 'google_enabled' is True.
-#     shared.globals.CONFIGURATION = {
-#         "google_enabled": True,
-#         "vault_google_name": "foo"
-#     }
-#     shared_google.check_group_alias("mock@mock.com")
-#     assert mi1.called is True
