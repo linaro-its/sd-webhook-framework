@@ -375,7 +375,7 @@ def test_ticket_request_type_4(mock_get_cf_id):
     # Stop pylint complaining we don't use the argument.
     _ = mock_get_cf_id
     result = shared_sd.ticket_request_type(data)
-    assert result == None
+    assert result is None
 
 
 def test_usable_ticket_data():
@@ -509,8 +509,8 @@ def test_look_for_trigger_2(capsys):
     }
     shared_sd.look_for_trigger("test", data, "to")
     captured = capsys.readouterr()
-    assert captured.out == "No webhookEvent field in ticket data\nNo usable ticket data for Jira trigger\n"
-
+    assert captured.out == ("No webhookEvent field in ticket data"
+                            "\nNo usable ticket data for Jira trigger\n")
 
 def test_automation_triggered_comment_1():
     """ Test the code that determines if the automation wrote the last comment. """
@@ -738,7 +738,7 @@ def test_assign_issue_to_1(mi1):
 @mock.patch(
     'shared.shared_sd.post_comment',
     autospec=True
-)    
+)
 @mock.patch(
     'shared.shared_sd.assign_issue_to_account_id',
     autospec=True
@@ -889,7 +889,7 @@ def test_get_current_status_2():
         json={},
         status=400
     )
-    assert shared_sd.get_current_status() == None
+    assert shared_sd.get_current_status() is None
 
 
 @mock.patch(
@@ -1232,7 +1232,7 @@ def test_get_servicedesk_request_types_2():
         status=400
     )
     result = shared_sd.get_servicedesk_request_types(project_id)
-    assert result == None
+    assert result is None
 
 
 def test_ticket_issue_type():
@@ -1253,7 +1253,7 @@ def test_get_user_field_1(capsys):
     result = shared_sd.get_user_field(None, "foo")
     captured = capsys.readouterr()
     assert captured.out == "get_user_field: passed None as user blob\n"
-    assert result == None
+    assert result is None
 
 
 def test_get_user_field_2(capsys):
@@ -1263,8 +1263,9 @@ def test_get_user_field_2(capsys):
     }
     result = shared_sd.get_user_field(user_blob, "foo")
     captured = capsys.readouterr()
-    assert captured.out == 'get_user_field: requested field foo is not in the blob\n{"test_field": "bar"}\n'
-    assert result == None
+    assert captured.out == ('get_user_field: requested field foo is not in the blob'
+                            '\n{"test_field": "bar"}\n')
+    assert result is None
 
 
 def test_get_user_field_3():
@@ -1296,7 +1297,7 @@ def test_get_user_field_4(capsys):
     assert captured.out == ("Got status 404 when querying"
         " https://mock-server/rest/servicedeskapi/request/"
         " for user field foo\n")
-    assert result == None
+    assert result is None
 
 
 @responses.activate
@@ -1338,14 +1339,14 @@ def test_get_user_field_6(capsys):
     result = shared_sd.get_user_field(user_blob, "foo")
     captured = capsys.readouterr()
     assert captured.out == 'get_user_field: \'foo\' not in the self data\n{"bar": "foo"}\n'
-    assert result == None
+    assert result is None
 
 
 def test_get_assignee_field_1():
     """Test the function when 'fields' not in ticket data"""
     data = {}
     result = shared_sd.get_assignee_field(data, "foo")
-    assert result == None
+    assert result is None
 
 
 def test_get_assignee_field_2():
@@ -1385,7 +1386,7 @@ def test_assignee_email_address_2():
         }
     }
     result = shared_sd.assignee_email_address(data)
-    assert result == None
+    assert result is None
 
 
 @mock.patch(
@@ -1634,7 +1635,7 @@ def test_add_to_customfield_value_1(capsys):
         '{"error": "not found"}\n'
         '{"update": {"foo": [{"add": "bar"}]}}\n'
     )
-    
+
 
 @responses.activate
 def test_add_to_customfield_value_2():
@@ -1678,7 +1679,7 @@ def test_deassign_ticket_if_appropriate_1(mi1):
     }
     result = shared_sd.deassign_ticket_if_appropriate(last_comment)
     assert mi1.called is True
-    assert result == None
+    assert result is None
 
 
 @mock.patch(
@@ -1706,7 +1707,7 @@ def test_deassign_ticket_if_appropriate_2(mi1, mi2):
     result = shared_sd.deassign_ticket_if_appropriate(last_comment)
     assert mi1.called is True
     assert mi2.called is True
-    assert result == None
+    assert result is None
 
 
 @mock.patch(
@@ -1839,7 +1840,7 @@ def test_add_request_participant_1(mi1):
     a request participant on the current issue"""
     result = shared_sd.add_request_participant("mock@mock.com")
     assert mi1.called is True
-    assert result == None
+    assert result is None
 
 
 @mock.patch(
@@ -1914,7 +1915,7 @@ def test_is_request_participant_1():
         status=400
     )
     result = shared_sd.is_request_participant("mock@mock.com")
-    assert result == False
+    assert result is False
 
 
 @responses.activate
@@ -1940,7 +1941,7 @@ def test_is_request_participant_2():
         status=200
     )
     result = shared_sd.is_request_participant("mock@mock.com")
-    assert result == True
+    assert result is True
 
 
 @responses.activate
@@ -1968,7 +1969,7 @@ def test_is_request_participant_3():
         status=200
     )
     result = shared_sd.is_request_participant("mock1@mock.com")
-    assert result == False
+    assert result is False
 
 
 @responses.activate
@@ -2015,7 +2016,7 @@ def test_is_request_participant_4():
         status=200
     )
     result = shared_sd.is_request_participant("mock1@mock.com")
-    assert result == False
+    assert result is False
 
 
 @responses.activate
