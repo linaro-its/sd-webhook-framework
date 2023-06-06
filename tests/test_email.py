@@ -33,6 +33,7 @@ class BaseMockSMTPSession:
         _ = self
 
 class MockSMTP1(BaseMockSMTPSession):
+    """A mock SMPT class. """
     def sendmail(self, from_list, to_list, msg):
         """ A simple function to test what send_email does. """
         _ = self
@@ -41,14 +42,19 @@ class MockSMTP1(BaseMockSMTPSession):
         assert msg == 'From: from@mock.mock\nTo: to@mock.mock\nCc: cc@mock.mock\n\n'
 
 class MockSMTP2(BaseMockSMTPSession):
+    """A mock SMPT class. """
     def sendmail(self, from_list, to_list, msg):
         """ A simple function to test what send_email does. """
         _ = self
         assert from_list == "from@mock.mock"
         assert to_list == ["to@mock.mock", "cc@mock.mock"]
-        assert msg == 'Subject: Mock Subject\nFrom: from@mock.mock\nTo: to@mock.mock, cc@mock.mock\nContent-Type: text/plain; charset="utf-8"\nContent-Transfer-Encoding: 7bit\nMIME-Version: 1.0\n\n\n'
+        assert msg == ('Subject: Mock Subject\nFrom: from@mock.mock\nTo: to@mock.mock,'
+                       ' cc@mock.mock\nContent-Type: text/plain;'
+                        ' charset="utf-8"\nContent-Transfer-Encoding: 7bit'
+                        '\nMIME-Version: 1.0\n\n\n')
 
 class MockSMTP3(BaseMockSMTPSession):
+    """A mock SMPT class. """
     def sendmail(self, from_list, to_list, msg):
         """ A simple function to test what send_email does. """
         _ = self
@@ -98,7 +104,7 @@ def test_send_email_1(mi1):
         "mail_user": "mock_user",
         "mail_password": "mock_password"
     }
-    
+
     msg = EmailMessage()
     msg["From"] = "from@mock.mock"
     msg["To"] = "to@mock.mock"
