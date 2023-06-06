@@ -4,7 +4,7 @@
 import mock
 import pytest
 
-from ldap3 import MODIFY_ADD
+from ldap3 import MODIFY_ADD, MODIFY_DELETE
 import shared.shared_ldap as shared_ldap
 import shared.globals
 
@@ -53,7 +53,7 @@ class MockLDAP3Value: # pylint: disable=too-few-public-methods
     @property
     def value(self):
         return self._value
-    
+
     @value.setter
     def value(self, v):
         self._value = v
@@ -68,7 +68,7 @@ class MockLDAP3Entry: # pylint: disable=too-few-public-methods
     @property
     def entry_dn(self):
         return self._entry_dn
-    
+
     @entry_dn.setter
     def entry_dn(self, v):
         self._entry_dn = v
@@ -76,7 +76,7 @@ class MockLDAP3Entry: # pylint: disable=too-few-public-methods
     @property
     def uidNumber(self):
         return self._uidNumber
-    
+
     @uidNumber.setter
     def uidNumber(self, v):
         self._uidNumber = v
@@ -316,7 +316,6 @@ def test_get_next_uid_number(mi1):
     assert mi1.called is True
 
 
-
 def mock_get_best_uid(connection, uid):
     """
     Mock get_best_uid to just return the uid we're passed.
@@ -445,7 +444,7 @@ def test_add_to_mailing_group(mi1):
     autospec=True
 )
 def test_add_to_group_1(mi1, mi2):
-    """ Test add_to_group. """
+    """ Test add_to_group when add_dn starts with uid= """
     shared_ldap.add_to_group("group_name", "uid=fred.flintstone,ou=accounts,base_dn")
     assert mi1.called is True
     assert mi2.called is True
@@ -456,7 +455,7 @@ def test_add_to_group_1(mi1, mi2):
     autospec=True
 )
 def test_add_to_group_2(mi1):
-    """ Test add_to_group. """
+    """ Test add_to_group when add_dn starts with cn= """
     shared_ldap.add_to_group("group_name", "cn=foo.bar,ou=accounts,base_dn")
     assert mi1.called is True
 
@@ -490,25 +489,149 @@ def test_is_dn_in_group_1(mi1):
     assert mi1.called is True
 
 
-# @mock.patch(
-#     "shared.shared_ldap.parameterised_member_of_group",
-#     return_value=None,
-#     autospec=True
-# )
-# def test_is_dn_in_group_2(mi1):
-#     """ Test is_dn_in_group
-#     when the user is already in the group. """
-#     result = shared_ldap.is_dn_in_group("mock-group", "uid=fred.flintstone,ou=accounts,base_dn")
-#     assert result is True
-#     assert mi1.called is True
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    return_value=None,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.parameterised_member_of_group",
+    return_value=None,
+    autospec=True
+)
+def test_is_dn_in_group_2(mi1, mi2):
+    """ Test is_dn_in_group
+    when the user is not in the group
+    we are checking. Also, not a
+    member of the nested group. """
+    result = shared_ldap.is_dn_in_group(
+        "mock-group",
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        True
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result is False
+
+
+class MockUniqueMember_1:
+    """
+    A Mock class for unique member values.
+    """
+    values = ["uid=alf.flintstone,ou=accounts,base_dn"]
+
+class MockResultObject_1:
+    """
+    A Mock class for matching
+    object result. 
+    """
+    uniqueMember = MockUniqueMember_1()
+
+
+def mock_find_matching_objects_test_1(
+        ldap_filter,
+        attributes,
+        base=None):
+    """
+    A Mock test function for find_matching_objects. 
+    """
+    _ = ldap_filter
+    _ = attributes
+    _ = base
+    result =  []
+    result.append(MockResultObject_1())
+    return result
+
+
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    side_effect=mock_find_matching_objects_test_1,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.parameterised_member_of_group",
+    return_value=None,
+    autospec=True
+)
+def test_is_dn_in_group_3(mi1, mi2):
+    """ Test is_dn_in_group
+    when the user is not in the group
+    we are checking. But, the user is a member of
+    any nested group. """
+    result = shared_ldap.is_dn_in_group(
+        "mock-group",
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        True
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+    assert result is False
+
+
+class MockUniqueMember_2:
+    """
+    A Mock class for unique member values.
+    """
+    values = ["cn=mock-group1,ou=groups,base_dn"]
+
+class MockResultObject_2:
+    """
+    A Mock class for matching
+    object result. 
+    """
+    uniqueMember = MockUniqueMember_2()
+
+
+def mock_find_matching_objects_test_2(
+        ldap_filter,
+        attributes,
+        base=None):
+    """
+    A Mock test function for find_matching_objects. 
+    """
+    _ = ldap_filter
+    _ = attributes
+    _ = base
+    result =  []
+    result.append(MockResultObject_2())
+    return result
+
+
+@mock.patch(
+    "shared.shared_ldap.extract_id_from_dn",
+    return_value="mock-group1",
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.find_matching_objects",
+    side_effect=mock_find_matching_objects_test_2,
+    autospec=True
+)
+@mock.patch(
+    "shared.shared_ldap.parameterised_member_of_group",
+    return_value=None,
+    autospec=True
+)
+def test_is_dn_in_group_4(mi1, mi2, mi3):
+    """ Test is_dn_in_group
+    when the user is not in the group
+    we are checking. But, the user is a member of
+    any nested group. """
+    result = shared_ldap.is_dn_in_group(
+        "mock-group",
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        True
+    )
+    assert mi1.called is True
+    assert mi2.called is True
+    assert mi3.called is True
 
 
 def mock_add_owner_to_mailing_group(
         group_name,
         add_dn):
     """
-    A Mock add_owner_to_security_group to test
-    adding owner to a security group.
+    A Mock function for add_owner_to_security_group.
     """
     assert group_name == "mock_group"
     assert add_dn == "uid=fred.flintstone,ou=accounts,base_dn"
@@ -518,8 +641,7 @@ def mock_add_owner_to_security_group(
         group_name,
         add_dn):
     """
-    A Mock add_owner_to_mailing_group to testing
-    adding owner to a mailing group.
+    A Mock function for add_owner_to_security_group.
     """
     assert group_name == "mock_group"
     assert add_dn == "uid=fred.flintstone,ou=accounts,base_dn"
@@ -548,8 +670,7 @@ def mock_is_dn_in_group(
         user_dn,
         recurse=False):
     """
-    A Mock is_dn_in_group to ckeck
-    id someone in a group.
+    A Mock function for is_dn_in_group.
     """
     assert group_name == "mock_group"
     assert user_dn == "uid=fred.flintstone,ou=accounts,base_dn"
@@ -572,10 +693,10 @@ def test_is_user_in_group_1(mi1, mi2):
     result = shared_ldap.is_user_in_group("mock_group", "fred.flintstone@widget.org")
     assert mi1.called is True
     assert mi2.called is True
-    assert result == True
+    assert result is True
 
 
-def mock_parameterised_add_to_group_add_owner_sec_group(
+def mock_parameterised_add_to_group_sec(
         group_name,
         group_location_tag,
         member_attribute,
@@ -592,7 +713,7 @@ def mock_parameterised_add_to_group_add_owner_sec_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_add_to_group",
-    side_effect=mock_parameterised_add_to_group_add_owner_sec_group,
+    side_effect=mock_parameterised_add_to_group_sec,
     autospec=True
 )
 def test_add_owner_to_security_group_1(mi1):
@@ -620,7 +741,7 @@ def test_add_owner_to_security_group_2(mi1):
     assert result is True
 
 
-def mock_parameterised_add_to_group_add_owner_mail_group(
+def mock_parameterised_add_to_group_mail(
         group_name,
         group_location_tag,
         member_attribute,
@@ -637,7 +758,7 @@ def mock_parameterised_add_to_group_add_owner_mail_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_add_to_group",
-    side_effect=mock_parameterised_add_to_group_add_owner_mail_group,
+    side_effect=mock_parameterised_add_to_group_mail,
     autospec=True
 )
 def test_add_owner_to_mailing_group_1(mi1):
@@ -665,7 +786,7 @@ def test_add_owner_to_mailing_group_2(mi1):
     assert result is True
 
 
-def mock_parameterised_remove_from_group_sec_group(
+def mock_parameterised_remove_from_group_sec(
         group_name,
         group_location_tag,
         member_attribute,
@@ -682,7 +803,7 @@ def mock_parameterised_remove_from_group_sec_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_remove_from_group",
-    side_effect=mock_parameterised_remove_from_group_sec_group,
+    side_effect=mock_parameterised_remove_from_group_sec,
     autospec=True
 )
 @mock.patch(
@@ -722,7 +843,7 @@ def test_remove_from_security_group_2(mi1, mi2):
     assert result is True
 
 
-def mock_parameterised_remove_from_group_mailing_group(
+def mock_parameterised_remove_from_group_mail(
         group_name,
         group_location_tag,
         member_attribute,
@@ -739,11 +860,11 @@ def mock_parameterised_remove_from_group_mailing_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_remove_from_group",
-    side_effect=mock_parameterised_remove_from_group_mailing_group,
+    side_effect=mock_parameterised_remove_from_group_mail,
     autospec=True
 )
 def test_remove_from_mailing_group_1(mi1):
-    """Test remove_from_mailing_group . """
+    """Test remove_from_mailing_group. """
     shared_ldap.remove_from_mailing_group(
         "mock_group",
         "uid=fred.flintstone,ou=accounts,base_dn"
@@ -767,7 +888,7 @@ def test_remove_from_mailing_group_2(mi1):
     assert result is True
 
 
-def mock_parameterised_remove_from_group_remove_owner_sec_group(
+def mock_parameterised_remove_from_group_sg(
         group_name,
         group_location_tag,
         member_attribute,
@@ -784,7 +905,7 @@ def mock_parameterised_remove_from_group_remove_owner_sec_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_remove_from_group",
-    side_effect=mock_parameterised_remove_from_group_remove_owner_sec_group,
+    side_effect=mock_parameterised_remove_from_group_sg,
     autospec=True
 )
 def test_remove_owner_from_security_group_1(mi1):
@@ -812,7 +933,7 @@ def test_remove_owner_from_security_group_2(mi1):
     assert result is True
 
 
-def mock_parameterised_remove_from_group_remove_owner_mailing_group(
+def mock_parameterised_remove_from_group_mg(
         group_name,
         group_location_tag,
         member_attribute,
@@ -829,7 +950,7 @@ def mock_parameterised_remove_from_group_remove_owner_mailing_group(
 
 @mock.patch(
     "shared.shared_ldap.parameterised_remove_from_group",
-    side_effect=mock_parameterised_remove_from_group_remove_owner_mailing_group,
+    side_effect=mock_parameterised_remove_from_group_mg,
     autospec=True
 )
 def test_remove_owner_from_mailing_group_1(mi1):
@@ -857,41 +978,38 @@ def test_remove_owner_from_mailing_group_2(mi1):
     assert result is True
 
 
-def mock_remove_from_security_group(
+def mock_remove_from_security_group_1(
         group_name,
         object_dn):
     """
-    A mock remove_from_security_group to test
-    removing a DN from a security group.
+    A mock function for remove_from_security_group.
     """
     assert group_name == "mock_group"
     assert object_dn == "uid=fred.flintstone,ou=accounts,base_dn"
 
 
-def mock_remove_from_mailing_group_test_1(
+def mock_remove_from_mailing_group_1(
         group_name,
         object_dn):
     """
-    A mock remove_from_security_group to test
-    removing a DN from a mailing group.
+    A mock function for remove_from_mailing_group.
     """
     assert group_name == "mock_group"
     assert object_dn == "uid=fred.flintstone,ou=accounts,base_dn"
 
 @mock.patch(
     "shared.shared_ldap.remove_from_mailing_group",
-    side_effect = mock_remove_from_mailing_group_test_1,
+    side_effect = mock_remove_from_mailing_group_1,
     autospec=True
 )
 @mock.patch(
     "shared.shared_ldap.remove_from_security_group",
-    side_effect = mock_remove_from_security_group,
+    side_effect = mock_remove_from_security_group_1,
     autospec=True
 )
 def test_remove_from_group_1(mi1, mi2):
     """
-    Test remove_from_group to test removing a DN
-    from both security and mailing groups.
+    Test remove_from_group if the DN starts with uid=
     """
     shared_ldap.remove_from_group(
         "mock_group",
@@ -901,12 +1019,11 @@ def test_remove_from_group_1(mi1, mi2):
     assert mi2.called is True
 
 
-def mock_remove_from_mailing_group_test_2(
+def mock_remove_from_mailing_group_2(
         group_name,
         object_dn):
     """
-    A mock remove_from_security_group to test
-    removing a DN from a mailing group.
+    A mock function for remove_from_mailing_group.
     """
     assert group_name == "mock_mail_group"
     assert object_dn == "cn=mock_mail_group,ou=groups,base_dn"
@@ -914,12 +1031,12 @@ def mock_remove_from_mailing_group_test_2(
 
 @mock.patch(
     "shared.shared_ldap.remove_from_mailing_group",
-    side_effect = mock_remove_from_mailing_group_test_2,
+    side_effect = mock_remove_from_mailing_group_2,
     autospec=True
 )
 def test_remove_from_group_2(mi1):
     """
-    Test remove_from_group if the DN is a mailing group.
+    Test remove_from_group if the DN starts with cn=
     """
     shared_ldap.remove_from_group(
         "mock_mail_group",
@@ -956,7 +1073,7 @@ def test_remove_from_group_3(mi1):
     autospec=True
 )
 def test_remove_owner_from_group_1(mi1, mi2):
-    """Test remove_owner_from_group """
+    """Test remove_owner_from_group. """
     shared_ldap.remove_owner_from_group(
         "mock_group",
         "uid=fred.flintstone,ou=accounts,base_dn"
@@ -966,7 +1083,7 @@ def test_remove_owner_from_group_1(mi1, mi2):
 
 
 def test_flatten_list_1():
-    """Test flatten_list when ldap_enabled is False"""
+    """Test flatten_list when ldap_enabled is False. """
     shared.globals.CONFIGURATION = {
         "ldap_enabled": False
     }
@@ -978,7 +1095,7 @@ def test_flatten_list_1():
 
 
 def test_flatten_list_2():
-    """Test flatten_list when ldap_enabled is None"""
+    """Test flatten_list when ldap_enabled is None. """
     shared.globals.CONFIGURATION = {
         "ldap_enabled": None
     }
@@ -1010,18 +1127,12 @@ def test_flatten_list_4(mi1):
     shared.globals.CONFIGURATION = {
         "ldap_enabled": True
     }
-    expected_results=[
-        "uid=fred.flintstone,ou=accounts,base_dn",
-        "uid=alf.flintstone,ou=accounts,base_dn"
-    ]
-
     starting_list = [
         "cn=mock_group1,ou=mailing,base_dn",
         "cn=mock_group2,ou=mailing,base_dn"
     ]
     result = shared_ldap.flatten_list(starting_list)
     assert mi1.called is True
-    # assert result == expected_results
 
 
 def test_process_list_member_1():
@@ -1061,11 +1172,11 @@ def test_process_list_member_3(mi1, mi2):
     """ Test process_list_member
     when MAILING_OU is in the item
     and if the group member doesn't
-    exists in the result list. """
+    exist in the result list. """
     expected_result=["uid=fred.flintstone,ou=accounts,base_dn"]
     result = []
     item = "cn=mock_group1,ou=mailing,base_dn"
-    result == shared_ldap.process_list_member(item, result)
+    shared_ldap.process_list_member(item, result)
     assert mi1.called is True
     assert mi2.called is True
     assert result == expected_result
@@ -1089,7 +1200,7 @@ def test_process_list_member_4(mi1, mi2):
     expected_result=["uid=fred.flintstone,ou=accounts,base_dn"]
     result = ["uid=fred.flintstone,ou=accounts,base_dn"]
     item = "cn=mock_group1,ou=mailing,base_dn"
-    result == shared_ldap.process_list_member(item, result)
+    shared_ldap.process_list_member(item, result)
     assert mi1.called is True
     assert mi2.called is True
     assert result == expected_result
@@ -1219,7 +1330,8 @@ def test_find_group_1(mi1):
 )
 def test_find_group_2(mi1):
     """ Test find_group when group name
-    doesn't have '@'.  """
+    doesn't include '@' and can't find any
+    matching object. """
     group_name = "mock.group"
     attribute = ["uniqueMember"]
     result = shared_ldap.find_group(group_name, attribute)
@@ -1229,17 +1341,27 @@ def test_find_group_2(mi1):
 
 @mock.patch(
     "shared.shared_ldap.find_matching_objects",
-    return_value=[],
+    return_value=[
+        "cn=mock.group,ou=mailing,base_dn",
+        "cn=mock.group1,ou=mailing,base_dn"
+    ],
     autospec=True
 )
 def test_find_group_3(mi1):
     """ Test find_group when group name
-    doesn't have '@'.  """
+    doesn't include '@' and finds more or less
+    than one result in LDAP.  """
     group_name = "mock.group"
     attribute = ["uniqueMember"]
     result = shared_ldap.find_group(group_name, attribute)
     assert mi1.called is True
-    assert result == ('mock.group', [])
+    assert result == (
+        'mock.group',
+        [
+            'cn=mock.group,ou=mailing,base_dn',
+            'cn=mock.group1,ou=mailing,base_dn'
+        ]
+    )
 
 
 @mock.patch(
@@ -1252,7 +1374,7 @@ def test_find_group_3(mi1):
     return_value=[],
     autospec=True
 )
-def test_find_group_4(mi1, mi2):
+def test_find_group_5(mi1, mi2):
     """ Test find_group when group name has
     '@' AND 'google_enabled' is True AND
     there is no aliases in Google. """
@@ -1267,76 +1389,14 @@ def test_find_group_4(mi1, mi2):
     assert result == ('mock.group@widget.org', [])
 
 
-# class MockMailVauleObject:
-#     """"""
-#     values = ["mock.group@widget.org", "mock.group1@widget.org"]
-
-# class MockMailObject:
-#     """"""
-#     mail = MockMailVauleObject()
-#     uniqueMember = "uid=fred.flintstone,ou=accounts,base_dn"
-    
-# def mock_find_matching_objects_test1(
-#         ldap_filter,
-#         attributes,
-#         base=None):
-#     """
-#     A mock function for 'find_matching_objects'.
-#     """
-#     result = []
-#     result.append(MockMailObject())
-#     return result
-
-
-# @mock.patch(
-#     "shared.shared_ldap.find_matching_objects",
-#     side_effect=mock_find_matching_objects_test1,
-#     autospec=True
-# )
-# def test_find_group_5(mi1):
-#     """ Test find_group when group name
-#     doesn't have '@' and group has 
-#     more than one email address.  """
-#     group_name = "mock.group"
-#     attribute = ["uniqueMember"]
-#     result = shared_ldap.find_group(group_name, attribute)
-#     assert mi1.called is True
-#     assert result == True
-
-
-# @mock.patch(
-#     "shared.shared_ldap.shared_google.check_group_alias",
-#     return_value="mock.group_alias@widget.org",
-#     autospec=True
-# )
-# @mock.patch(
-#     "shared.shared_ldap.find_matching_objects",
-#     return_value=[],
-#     autospec=True
-# )
-# def test_find_group_5(mi1, mi2):
-#     """ Test find_group when group name has
-#     '@' AND 'google_enabled' is True AND
-#     there is aliases in Google. """
-#     shared.globals.CONFIGURATION = {
-#         "google_enabled": True
-#     }
-#     group_name = "mock.group@widget.org"
-#     attribute = ["uniqueMember"]
-#     result = shared_ldap.find_group(group_name, attribute)
-#     assert mi1.called is True
-#     assert mi2.called is True
-#     assert result == ('mock.group@widget.org', [])
-
-
 mock.patch(
     "shared.shared_ldap.get_object",
     return_value=None,
     autospec=True
 )
-def test_get_manager_from_dn_1():   
+def test_get_manager_from_dn_1():
     """ Test get_manager_from_dn function
-    when get_object returns None """
+    when get_object returns None. """
     dn = "uid=fred.flintstone,ou=accounts,base_dn"
     result = shared_ldap.get_manager_from_dn(dn)
     assert result is None
@@ -1357,13 +1417,13 @@ class MockGetObject_2():
     """ A Mock object for querying manager. """
     manager = MockManagerObject_2()
 
-    
+
 @mock.patch(
     "shared.shared_ldap.get_object",
     side_effect=[MockGetObject_2, MockManagerObject_2],
     autospec=True
 )
-def test_get_manager_from_dn_2(mi1):   
+def test_get_manager_from_dn_2(mi1):
     """ Test get_manager_from_dn function
     when the staff has a manager attribute.
     """
@@ -1377,7 +1437,7 @@ class MockGetObject_3():
     """ A Mock object for querying manager. """
     manager = None
 
-    
+
 @mock.patch(
     "shared.shared_ldap.get_object",
     side_effect=[MockGetObject_3],
@@ -1402,13 +1462,13 @@ class MockGetObject_4():
     """ A Mock object for querying manager. """
     manager = MockManagerObject_4()
 
-    
+
 @mock.patch(
     "shared.shared_ldap.get_object",
     side_effect=[MockGetObject_4, MockManagerObject_4],
     autospec=True
 )
-def test_get_manager_from_dn_4(mi1):   
+def test_get_manager_from_dn_4(mi1):
     """ Test get_manager_from_dn function
     when result.manager.value is None.
     """
@@ -1418,43 +1478,23 @@ def test_get_manager_from_dn_4(mi1):
     assert result is None
 
 
-class MockGetObject_5():
-    """ A Mock object for querying manager. """
-    manager = MockManagerObject_2()
-
-    
-@mock.patch(
-    "shared.shared_ldap.get_object",
-    side_effect=[MockGetObject_5, None],
-    autospec=True
-)
-def test_get_manager_from_dn_5(mi1):   
-    """ Test get_manager_from_dn function
-    when calling get_object for manager is None.
-    """
-    dn = "uid=fred.flintstone,ou=accounts,base_dn"
-    result = shared_ldap.get_manager_from_dn(dn)
-    assert mi1.called is True
-    assert result is None
-
-
-class MockManagerObject_6:
+class MockManagerObject_5:
     """ A Mock manager object. """
     value = "uid=alf.flintstone,ou=accounts,base_dn"
     mail = None
 
 
-class MockGetObject_6():
+class MockGetObject_5():
     """ A Mock object for querying manager. """
     manager = MockManagerObject_2()
 
-    
+
 @mock.patch(
     "shared.shared_ldap.get_object",
-    side_effect=[MockGetObject_6, MockManagerObject_6],
+    side_effect=[MockGetObject_5, MockManagerObject_5],
     autospec=True
 )
-def test_get_manager_from_dn_6(mi1):   
+def test_get_manager_from_dn_5(mi1):
     """ Test get_manager_from_dn function
     when the value of mgr_email.mail is None.
     """
@@ -1464,28 +1504,28 @@ def test_get_manager_from_dn_6(mi1):
     assert result is None
 
 
-class MockMailObject_7():
+class MockMailObject_6():
     """ A Mock mail object. """
     values = []
 
 
-class MockManagerObject_7:
+class MockManagerObject_6:
     """ A Mock manager object. """
     value = "uid=alf.flintstone,ou=accounts,base_dn"
-    mail = MockMailObject_7()
+    mail = MockMailObject_6()
 
 
-class MockGetObject_7():
+class MockGetObject_6():
     """ A Mock object for querying manager. """
-    manager = MockManagerObject_7()
+    manager = MockManagerObject_6()
 
-    
+
 @mock.patch(
     "shared.shared_ldap.get_object",
-    side_effect=[MockGetObject_7, MockManagerObject_7],
+    side_effect=[MockGetObject_6, MockManagerObject_6],
     autospec=True
 )
-def test_get_manager_from_dn_7(mi1):   
+def test_get_manager_from_dn_6(mi1):
     """ Test get_manager_from_dn function
     when mail.values is an empty List.
     """
@@ -1508,45 +1548,12 @@ def test_find_single_object_from_email_1(mi1):
     assert result is None
 
 
-class MockMatchingObject:
-    """ A Mock matching object. """
-    entry_dn = "uid=fred.flintstone,ou=accounts,base_dn"
-
-
-def mock_find_matching_objects_1(
-        ldap_filter,
-        attributes,
-        base=None):
-    """
-    A mock function for 'find_matching_objects'
-    to return a matched object. 
-    """
-    _ = ldap_filter
-    _ = attributes
-    _ = base
-    result = []
-    result.append(MockMatchingObject())
-    return result
-
-@mock.patch(
-    "shared.shared_ldap.find_matching_objects",
-    side_effect=mock_find_matching_objects_1,
-    autospec=True
-)
-def test_find_single_object_from_email_2(mi1):
-    """Test find_single_object_from_email
-    when LDAP returns a matching object. """
-    result = shared_ldap.find_single_object_from_email("fred.flintstone@widget.org")
-    assert mi1.called is True
-    assert result == "uid=fred.flintstone,ou=accounts,base_dn"
-
-
 class MockMatchingObject_2:
     """ A Mock matching object. """
     entry_dn = "uid=fred.flintstone,ou=accounts,base_dn"
 
 
-def mock_find_matching_objects_3(
+def mock_find_matching_objects_2(
         ldap_filter,
         attributes,
         base=None):
@@ -1561,31 +1568,203 @@ def mock_find_matching_objects_3(
     result.append(MockMatchingObject_2())
     return result
 
-def mock_find_matching_objects_2(
-        ldap_filter,
-        attributes,
-        base=None):
-    """
-    A mock function for 'find_matching_objects'
-    to return a matched object. 
-    """
-    return None
-
-
-@mock.patch(
-    "shared.shared_ldap.cleanup_if_gmail",
-    return_value="fredflintstone@gmail.com",
-    autospec=True
-)
 @mock.patch(
     "shared.shared_ldap.find_matching_objects",
-    side_effect=[mock_find_matching_objects_2, mock_find_matching_objects_3],
+    side_effect=mock_find_matching_objects_2,
     autospec=True
 )
-def test_find_single_object_from_email_2(mi1, mi2):
+def test_find_single_object_from_email_2(mi1):
     """Test find_single_object_from_email
     when LDAP returns a matching object. """
-    result = shared_ldap.find_single_object_from_email("fred.flintstone@gmail.com")
+    result = shared_ldap.find_single_object_from_email("fred.flintstone@widget.org")
     assert mi1.called is True
-    assert mi2.called is True
     assert result == "uid=fred.flintstone,ou=accounts,base_dn"
+
+
+class MockUniquieMemberValues_1:
+    """A Mock class for uniqueMember.values. """
+    values = [
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "uid=alf.flintstone,ou=accounts,base_dn"
+    ]
+
+
+class MockUniquieMember_1:
+    """ A mock class for uniqueMember. """
+    uniqueMember = MockUniquieMemberValues_1()
+
+
+def mock_find_group_1(
+        name,
+        attributes):
+    """ A mock function for find_group. """
+    _ = name
+    _ = attributes
+    result = []
+    result.append(MockUniquieMember_1())
+    return ("mock.group@widget.org", result)
+
+@mock.patch(
+    "shared.shared_ldap.find_group",
+    side_effect=mock_find_group_1,
+    autospec=True
+)
+def test_get_group_membership_1(mi1):
+    """Test get_group_membership
+    when the group is not empty. """
+    result = shared_ldap.get_group_membership("mock.group@widget.org")
+    assert mi1.called is True
+    assert result == [
+        'uid=fred.flintstone,ou=accounts,base_dn',
+        'uid=alf.flintstone,ou=accounts,base_dn'
+    ]
+
+class MockUniquieMemberValues_2:
+    """A Mock class for uniqueMember.values. """
+    values = []
+
+
+class MockUniquieMember_2:
+    """ A mock class for uniqueMember. """
+    uniqueMember = MockUniquieMemberValues_2()
+
+
+def mock_find_group_2(
+        name,
+        attributes):
+    """ A mock function for find_group. """
+    _ = name
+    _ = attributes
+    result = []
+    result.append(MockUniquieMember_2())
+    return ("mock.group@widget.org", result)
+
+@mock.patch(
+    "shared.shared_ldap.find_group",
+    side_effect=mock_find_group_2,
+    autospec=True
+)
+def test_get_group_membership_2(mi1):
+    """Test get_group_membership
+    when the group is empty. """
+    result = shared_ldap.get_group_membership("mock.group@widget.org")
+    assert mi1.called is True
+    assert result == []
+
+
+def test_parameterised_remove_from_group_1():
+    """ Test parameterised_remove_from_group. """
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.CONNECTION.fake_search_result = False
+    assert shared_ldap.parameterised_remove_from_group(
+        "fake-group",
+        "ldap_security_groups",
+        "memberUid",
+        "fred.flintstone") is True
+    shared_ldap.CONNECTION.fake_search_result = True
+    expected_results = {
+        "memberUid": [(MODIFY_DELETE, ["fred.flintstone"])]
+    }
+    assert shared_ldap.parameterised_remove_from_group(
+        "fake-group",
+        "ldap_security_groups",
+        "memberUid",
+        "fred.flintstone") == expected_results
+
+
+def test_get_object():
+    """ Test get_object. """
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.CONNECTION.fake_search_result = False
+    assert shared_ldap.get_object(
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "mail"
+    ) is None
+    shared_ldap.CONNECTION.fake_search_result = True
+    shared_ldap.get_object(
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "mail"
+    )
+
+
+def test_replace_attribute_value_1():
+    """Test replace_attribute_value
+    when new value is None."""
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.replace_attribute_value(
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "mail",
+        None
+    )
+
+
+def test_replace_attribute_value_2():
+    """Test replace_attribute_value
+    when new value is NOT None."""
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.replace_attribute_value(
+        "uid=fred.flintstone,ou=accounts,base_dn",
+        "mail",
+        "fred.flintstone@gmail.com"
+    )
+
+
+def test_find_matching_objects_1():
+    """Test find_matching_objects
+    when no matching object exists."""
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.CONNECTION.fake_search_result = False
+    filters = "mock.group@widget.org"
+    attribute = ["uniqueMember"]
+    result = shared_ldap.find_matching_objects(
+        filters,
+        attributes=attribute
+    )
+    assert result is None
+
+
+def test_find_matching_objects_2():
+    """Test find_matching_objects
+    when there is a matching object exists."""
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared_ldap.CONNECTION.fake_search_result = True
+    filters = "mock.group@widget.org"
+    attribute = ["uniqueMember"]
+    shared_ldap.find_matching_objects(
+        filters,
+        attributes=attribute
+    )
+
+
+@mock.patch(
+    "shared.shared_ldap.get_next_gid_number",
+    return_value="10002",
+    autospec=True
+)
+def test_create_group_1(mi1):
+    """Test create_group."""
+    shared_ldap.BASE_DN = "base_dn"
+    shared_ldap.CONNECTION = MockLDAP3Connection()
+    shared.globals.CONFIGURATION = {
+        "ldap_security_groups": None,
+    }
+    group_name = "mock.group"
+    description = "Mock Group"
+    display_name = "Mock Group"
+    address = "mock.group@widget.org"
+    owners = ["fred.flintstone@widget.org"]
+
+    shared_ldap.create_group(
+        group_name,
+        description,
+        display_name,
+        address,
+        owners
+    )
+    assert mi1.called is True
