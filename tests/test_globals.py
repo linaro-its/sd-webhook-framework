@@ -118,7 +118,7 @@ def test_validate_cf_config_3():
     }
     with pytest.raises(shared.globals.InvalidCFConfig):
         shared.globals.validate_cf_config()
- 
+
 
 def test_validate_user_password_config():
     """ Test various user/password combos. """
@@ -373,4 +373,4 @@ def test_get_google_credentials_2():
     with patch("builtins.open", mock_open(
             read_data=json.dumps(shared.globals.CONFIGURATION)
         )):
-            shared.globals.get_google_credentials()
+        shared.globals.get_google_credentials()
