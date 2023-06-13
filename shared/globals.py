@@ -176,7 +176,11 @@ def get_sd_credentials():
     """ Retrieve the credentials required by SD_AUTH """
     global CONFIGURATION
     if "bot_password" not in CONFIGURATION:
-        return CONFIGURATION["bot_name"], shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
+        # Try API key first
+        pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"], "api-token")
+        if pwd is None:
+            pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
+        return CONFIGURATION["bot_name"], pwd
     return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
 
 
