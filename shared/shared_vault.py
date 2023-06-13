@@ -5,7 +5,7 @@ import requests
 
 import shared.globals
 
-def get_vault_secret(secret_path: str, iam_role: str, url: str, key: str = "pw") -> str:
+def get_vault_secret(secret_path: str, iam_role: str, url: str) -> str:
     # Assume the desired IAM role
     sts_client = boto3.client('sts')
     assumed_role_object = sts_client.assume_role(
@@ -32,14 +32,15 @@ def get_vault_secret(secret_path: str, iam_role: str, url: str, key: str = "pw")
         f"{url}/v1/auth/token/revoke-self",
         headers=header)
     response.raise_for_status
-    return secret["data"][key]
+    return secret["data"]
 
 def get_secret(secret_path, key="pw"):
     """ Retrieve a secret from Hashicorp Vault service """
     secret = get_vault_secret(
         secret_path,
         iam_role=shared.globals.CONFIGURATION["vault_iam_role"],
-        url=shared.globals.CONFIGURATION["vault_server_url"],
-        key=key
+        url=shared.globals.CONFIGURATION["vault_server_url"]
     )
-    return secret
+    if key in secret:
+        return secret[key]
+    return None
