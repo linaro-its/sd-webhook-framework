@@ -379,6 +379,8 @@ def add_to_customfield_value(cf_id, value):
 
 def post_comment(comment, public_switch):
     """ Post a comment to the current issue. """
+    print(f"post_comment: ticket {shared.globals.TICKET}")
+    print(f"post_comment: {comment}")
     new_comment = {
         "body": comment,
         "public": public_switch
@@ -386,16 +388,14 @@ def post_comment(comment, public_switch):
     # Quietly ignore any errors returned. If we can't comment, we can't do
     # much!
     result = service_desk_request_post(
-        "%s/rest/servicedeskapi/request/%s/comment" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET),
+        f"{shared.globals.ROOT_URL}/rest/servicedeskapi/request/{shared.globals.TICKET}/comment",
         new_comment
     )
+    print(f"post_comment: got status code {result.status_code}")
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
-        print("Got status code %s in post_comment" % result.status_code)
-        print("Url: %s/rest/servicedeskapi/request/%s/comment" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET))
-        print("Comment: %s" % comment)
+        print(f"post_comment: Url: {shared.globals.ROOT_URL}/rest/servicedeskapi"
+              "/request/{shared.globals.TICKET}/comment")
         print(result.text)
 
 
