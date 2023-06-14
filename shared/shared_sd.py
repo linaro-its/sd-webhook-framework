@@ -15,6 +15,7 @@ vault_auth can be found at https://github.com/linaro-its/vault_auth
 import json
 import urllib
 from datetime import datetime
+from typing import Union
 
 import requests
 
@@ -669,6 +670,19 @@ def set_summary(summary):
     shared.globals.TICKET_DATA["fields"]["summary"] = summary
 
 
+def find_account_id(email_address: str) -> Union[str, None]:
+    """ Look up the email address and return the corresponding account ID or None if not found """
+    result = service_desk_request_get(
+        f"{shared.globals.ROOT_URL}/rest/api/2/user/search?query={email_address}"
+    )
+    if result.status_code != 200:
+        return None
+    data = result.json()
+    if len(data) == 1:
+        return data[0]["accountId"]
+    return None
+
+
 def add_request_participant(email_address):
     """
     Add the specified email address as a request participant to the current
@@ -676,7 +690,14 @@ def add_request_participant(email_address):
     """
     if is_request_participant(email_address):
         return
-    update = {'usernames': [email_address]}
+    account_id = find_account_id(email_address)
+    if account_id is None:
+        post_comment(
+            f"Unable to add {email_address} as request participant to {shared.globals.TICKET}. User not found.",
+            False
+        )
+        return
+    update = {'accountIds': [account_id]}
     result = service_desk_request_post(
         "%s/rest/servicedeskapi/request/%s/participant" % (
             shared.globals.ROOT_URL, shared.globals.TICKET), update)
