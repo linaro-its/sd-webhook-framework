@@ -23,30 +23,36 @@ import shared.custom_fields as custom_fields
 import shared.globals
 import shared.shared_ldap as shared_ldap
 
-GDPR_ERROR = "'accountId' must be the only user identifying query parameter in GDPR strict mode."
+GDPR_ERROR = (
+    "'accountId' must be the only user identifying query parameter in GDPR strict mode."
+)
 TRANSITION_API = "%s/rest/api/2/issue/%s/transitions"
 
+
 class SharedSDError(Exception):
-    """ Base exception class for the library. """
+    """Base exception class for the library."""
+
 
 class MalformedIssueError(SharedSDError):
-    """ Malformed issue exception. """
+    """Malformed issue exception."""
+
 
 class CustomFieldLookupFailure(SharedSDError):
-    """ Custom field lookup failure exception. """
+    """Custom field lookup failure exception."""
 
 
 def get_servicedesk_projects():
-    """ Return all Service Desk projects. """
+    """Return all Service Desk projects."""
     result = service_desk_request_get(
-        "%s/rest/servicedeskapi/servicedesk" % shared.globals.ROOT_URL)
+        "%s/rest/servicedeskapi/servicedesk" % shared.globals.ROOT_URL
+    )
     if result.status_code == 200:
         return result.json()
     return None
 
 
 def get_servicedesk_id(sd_project_key):
-    """ Return the Service Desk ID for a given project key. """
+    """Return the Service Desk ID for a given project key."""
     projects = get_servicedesk_projects()
     if projects is not None:
         values = projects["values"]
@@ -57,17 +63,18 @@ def get_servicedesk_id(sd_project_key):
 
 
 def get_servicedesk_request_types(project_id):
-    """ Return all of the request types for a given Service Desk project. """
+    """Return all of the request types for a given Service Desk project."""
     result = service_desk_request_get(
-        "%s/rest/servicedeskapi/servicedesk/%s/requesttype" % (
-            shared.globals.ROOT_URL, project_id))
+        "%s/rest/servicedeskapi/servicedesk/%s/requesttype"
+        % (shared.globals.ROOT_URL, project_id)
+    )
     if result.status_code == 200:
         return result.json()
     return None
 
 
 def get_request_type_id(name, sdid):
-    """ Return the ID for the specified request type in the specified project. """
+    """Return the ID for the specified request type in the specified project."""
     request_types = get_servicedesk_request_types(sdid)
     if request_types is not None:
         for value in request_types["values"]:
@@ -79,33 +86,33 @@ def get_request_type_id(name, sdid):
 def save_text_as_attachment(filename, content, comment, public):
     """Save the specified text as a file on the current ticket."""
     headers = {
-        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
-        'X-Atlassian-Token': 'no-check',
-        'X-ExperimentalApi': 'true'
+        "Authorization": "Basic %s" % shared.globals.SD_AUTH,
+        "X-Atlassian-Token": "no-check",
+        "X-ExperimentalApi": "true",
     }
-    files = {'file': (filename, content, 'text/plain')}
+    files = {"file": (filename, content, "text/plain")}
     sd_id = get_servicedesk_id(shared.globals.PROJECT)
     if sd_id != -1:
         result = requests.post(
-            "%s/rest/servicedeskapi/servicedesk/%s/attachTemporaryFile" % (
-                shared.globals.ROOT_URL, sd_id),
-            headers=headers, files=files)
+            "%s/rest/servicedeskapi/servicedesk/%s/attachTemporaryFile"
+            % (shared.globals.ROOT_URL, sd_id),
+            headers=headers,
+            files=files,
+        )
         if result.status_code == 201:
             json_result = result.json()
             create = {
-                'temporaryAttachmentIds': [
-                    json_result["temporaryAttachments"][
-                        0]["temporaryAttachmentId"]
+                "temporaryAttachmentIds": [
+                    json_result["temporaryAttachments"][0]["temporaryAttachmentId"]
                 ],
-                'public': public,
-                'additionalComment': {
-                    'body': comment
-                }
+                "public": public,
+                "additionalComment": {"body": comment},
             }
             result = service_desk_request_post(
-                "%s/rest/servicedeskapi/request/%s/attachment" % (
-                    shared.globals.ROOT_URL, shared.globals.TICKET),
-                create)
+                "%s/rest/servicedeskapi/request/%s/attachment"
+                % (shared.globals.ROOT_URL, shared.globals.TICKET),
+                create,
+            )
             if result.status_code == 404:
                 print(
                     "WARNING! It doesn't look like %s has permission to add attachments to %s"
@@ -119,22 +126,20 @@ def save_text_as_attachment(filename, content, comment, public):
 
 
 def ticket_issue_type(ticket_data):
-    """ Return the issue type for the provided ticket data. """
+    """Return the issue type for the provided ticket data."""
     return ticket_data["fields"]["issuetype"]["name"]
 
 
 def ticket_request_type(ticket_data):
-    """ Return the request type for the provided ticket data. """
+    """Return the request type for the provided ticket data."""
     # The request type is stored in the Customer Request Type CF.
     crt_cf = custom_fields.get("Customer Request Type")
     if crt_cf is None:
         crt_cf = custom_fields.get("Request Type")
     if crt_cf is None:
-        raise CustomFieldLookupFailure(
-            "Failed to find the request type information")
+        raise CustomFieldLookupFailure("Failed to find the request type information")
     if crt_cf not in ticket_data["fields"]:
-        raise MalformedIssueError(
-            "Failed to find '%s' in issue fields" % crt_cf)
+        raise MalformedIssueError("Failed to find '%s' in issue fields" % crt_cf)
     if ticket_data["fields"][crt_cf] is None:
         # Probably a Jira issue not a SD issue
         return None
@@ -142,7 +147,7 @@ def ticket_request_type(ticket_data):
 
 
 def save_ticket_data_as_attachment(ticket_data):
-    """ Save the ticket data as an attachment - used for debugging. """
+    """Save the ticket data as an attachment - used for debugging."""
     # Only do this if the data came from a Jira event or,
     # if it was triggered by a SD event, make sure that it wasn't a comment
     # created by this account ... otherwise we get into an event storm as
@@ -155,11 +160,12 @@ def save_ticket_data_as_attachment(ticket_data):
             "%s.json" % datetime.now().strftime("%e%b-%H%M"),
             json.dumps(ticket_data),
             "Request payload for ticket creation",
-            False)
+            False,
+        )
 
 
 def automation_triggered_comment(ticket_data):
-    """ Try to determine if we (the automation) triggered the last comment. """
+    """Try to determine if we (the automation) triggered the last comment."""
     comments = None
     if "comment" in ticket_data:
         comments = ticket_data["comment"]
@@ -172,30 +178,28 @@ def automation_triggered_comment(ticket_data):
 
 
 def trigger_is_assignment(ticket_data):
-    """ Did a change of assignee trigger this event? """
+    """Did a change of assignee trigger this event?"""
     return look_for_trigger("assignee", ticket_data, "to")
 
 
 def trigger_is_transition(ticket_data):
-    """ Did a transition trigger this event? """
+    """Did a transition trigger this event?"""
     return look_for_trigger("status", ticket_data, "toString")
 
 
 # Jira will trigger the jira:issue_updated webhook for any change to an issue,
 # including comments.
 def look_for_trigger(trigger_type, ticket_data, to_tag):
-    """ Try to find the specified trigger type in the ticket data. """
+    """Try to find the specified trigger type in the ticket data."""
     # Make sure that we've got ticket data for an assignment or a transition.
     if usable_ticket_data(ticket_data):
         # Walk through the changelog to see if there was a state transition. If
         # there was, return the relevant data to help the webhook automation
         # code.
         if "changelog" not in ticket_data:
-            raise MalformedIssueError(
-                "Failed to find changelog")
+            raise MalformedIssueError("Failed to find changelog")
         if "items" not in ticket_data["changelog"]:
-            raise MalformedIssueError(
-                "Failed to find changelog items")
+            raise MalformedIssueError("Failed to find changelog items")
         for item in ticket_data["changelog"]["items"]:
             if item["field"] == trigger_type and item["fieldtype"] == "jira":
                 return True, item[to_tag]
@@ -205,7 +209,7 @@ def look_for_trigger(trigger_type, ticket_data, to_tag):
 
 
 def usable_ticket_data(ticket_data):
-    """ Does the ticket data contain usable info? """
+    """Does the ticket data contain usable info?"""
     if "webhookEvent" not in ticket_data:
         print("No webhookEvent field in ticket data")
         return False
@@ -217,16 +221,18 @@ def usable_ticket_data(ticket_data):
         return False
     ietn = ticket_data["issue_event_type_name"]
     if ietn not in ("issue_assigned", "issue_generic"):
-        print("%s is not the type name we're looking for" % ticket_data["issue_event_type_name"])
+        print(
+            "%s is not the type name we're looking for"
+            % ticket_data["issue_event_type_name"]
+        )
         return False
     # It should be valid from hereon in
     return True
 
 
 def get_field(ticket_data, field_name):
-    """ Return the required custom field if it is in the data. """
-    if ("fields" in ticket_data and
-            field_name in ticket_data["fields"]):
+    """Return the required custom field if it is in the data."""
+    if "fields" in ticket_data and field_name in ticket_data["fields"]:
         return ticket_data["fields"][field_name]
     return None
 
@@ -249,8 +255,10 @@ def get_user_field(user_blob, field_name):
         return value
     result = service_desk_request_get(user_blob["self"])
     if result.status_code != 200:
-        print("Got status %s when querying %s for user field %s" % (
-            result.status_code, user_blob["self"], field_name))
+        print(
+            "Got status %s when querying %s for user field %s"
+            % (result.status_code, user_blob["self"], field_name)
+        )
         return None
     data = result.json()
     if field_name in data:
@@ -261,41 +269,44 @@ def get_user_field(user_blob, field_name):
 
 
 def user_is_bot(user_blob):
-    """ Check if the user mentioned in the blob is the configured bot. """
-    return get_user_field(user_blob, "emailAddress") == shared.globals.CONFIGURATION["bot_name"]
+    """Check if the user mentioned in the blob is the configured bot."""
+    return (
+        get_user_field(user_blob, "emailAddress")
+        == shared.globals.CONFIGURATION["bot_name"]
+    )
 
 
 def get_reporter_field(ticket_data, field_name):
-    """ Generalised function to get a field back for the reporter. """
-    if ("fields" in ticket_data and
-            "reporter" in ticket_data["fields"]):
+    """Generalised function to get a field back for the reporter."""
+    if "fields" in ticket_data and "reporter" in ticket_data["fields"]:
         return get_user_field(ticket_data["fields"]["reporter"], field_name)
     return None
 
 
 def reporter_email_address(ticket_data):
-    """ Get the reporter's email address from the ticket data. """
+    """Get the reporter's email address from the ticket data."""
     return get_reporter_field(ticket_data, "emailAddress")
 
 
 def get_assignee_field(ticket_data, field_name):
-    """ Generalised function to get a field back for the assignee. """
-    if ("fields" in ticket_data and
-            "assignee" in ticket_data["fields"]):
+    """Generalised function to get a field back for the assignee."""
+    if "fields" in ticket_data and "assignee" in ticket_data["fields"]:
         return get_user_field(ticket_data["fields"]["assignee"], field_name)
     return None
 
 
 def assignee_email_address(ticket_data):
-    """ Get the assignee's email address from the ticket data. """
+    """Get the assignee's email address from the ticket data."""
     return get_assignee_field(ticket_data, "emailAddress")
 
 
 def get_group_members(group_name):
-    """ Get the members of the specified group. """
+    """Get the members of the specified group."""
     enc_group_name = urllib.parse.quote(group_name)
     query_url = "%s/rest/api/2/group/member?groupname=%s" % (
-        shared.globals.ROOT_URL, enc_group_name)
+        shared.globals.ROOT_URL,
+        enc_group_name,
+    )
     result = service_desk_request_get(query_url)
     index = 0
     members = []
@@ -309,21 +320,23 @@ def get_group_members(group_name):
             if unpack["isLast"]:
                 break
             index += unpack["maxResults"]
-            result = service_desk_request_get(
-                "%s&startAt=%s" % (query_url, index))
+            result = service_desk_request_get("%s&startAt=%s" % (query_url, index))
             # and loop ...
         else:
-            print("get_group_members(%s) failed with error code %s" % (
-                group_name, result.status_code))
+            print(
+                "get_group_members(%s) failed with error code %s"
+                % (group_name, result.status_code)
+            )
             break
     return members
 
 
 def groups_for_user(email_address):
-    """ Get all of the groups that the user is in. """
+    """Get all of the groups that the user is in."""
     result = service_desk_request_get(
-        "%s/rest/api/2/user?username=%s&expand=groups" % (
-            shared.globals.ROOT_URL, email_address))
+        "%s/rest/api/2/user?username=%s&expand=groups"
+        % (shared.globals.ROOT_URL, email_address)
+    )
     groups = []
     if result.status_code == 200:
         unpack = result.json()
@@ -345,8 +358,9 @@ def sd_orgs():
     orgs = {}
     if sd_id != -1:
         result = service_desk_request_get(
-            "%s/rest/servicedeskapi/servicedesk/%s/organization" % (
-                shared.globals.ROOT_URL, sd_id))
+            "%s/rest/servicedeskapi/servicedesk/%s/organization"
+            % (shared.globals.ROOT_URL, sd_id)
+        )
         if result.status_code == 200:
             unpack = result.json()
             org_list = unpack["values"]
@@ -356,55 +370,48 @@ def sd_orgs():
 
 
 def add_to_customfield_value(cf_id, value):
-    """ Save the specified value to the custom field. """
-    data = {
-        "update": {
-            cf_id: [
-                {
-                    "add": value
-                }
-            ]
-        }
-    }
+    """Save the specified value to the custom field."""
+    data = {"update": {cf_id: [{"add": value}]}}
     result = service_desk_request_put(
-        "%s/rest/api/2/issue/%s" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET),
-        data)
+        "%s/rest/api/2/issue/%s" % (shared.globals.ROOT_URL, shared.globals.TICKET),
+        data,
+    )
     if result.status_code != 204:
         print("Got status code %s in add_to_customfield_value" % result.status_code)
-        print("Url: %s/rest/api/2/issue/%s" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET))
+        print(
+            "Url: %s/rest/api/2/issue/%s"
+            % (shared.globals.ROOT_URL, shared.globals.TICKET)
+        )
         print(result.text)
         print(json.dumps(data))
 
 
 def post_comment(comment, public_switch):
-    """ Post a comment to the current issue. """
+    """Post a comment to the current issue."""
     print(f"post_comment: ticket {shared.globals.TICKET}")
     print(f"post_comment: {comment}")
-    new_comment = {
-        "body": comment,
-        "public": public_switch
-    }
+    new_comment = {"body": comment, "public": public_switch}
     # Quietly ignore any errors returned. If we can't comment, we can't do
     # much!
     result = service_desk_request_post(
         f"{shared.globals.ROOT_URL}/rest/servicedeskapi/request/{shared.globals.TICKET}/comment",
-        new_comment
+        new_comment,
     )
     print(f"post_comment: got status code {result.status_code}")
     # Trying to figure out why some comments go missing ...
     if result.status_code != 201:
-        print(f"post_comment: Url: {shared.globals.ROOT_URL}/rest/servicedeskapi"
-              "/request/{shared.globals.TICKET}/comment")
+        print(
+            f"post_comment: Url: {shared.globals.ROOT_URL}/rest/servicedeskapi"
+            "/request/{shared.globals.TICKET}/comment"
+        )
         print(result.text)
 
 
 def create_request(request_data):
-    """ Create a Service Desk request from the provided data. """
+    """Create a Service Desk request from the provided data."""
     result = service_desk_request_post(
-        "%s/rest/servicedeskapi/request" % shared.globals.ROOT_URL,
-        request_data)
+        "%s/rest/servicedeskapi/request" % shared.globals.ROOT_URL, request_data
+    )
     if result.status_code != 201:
         print("Got status code %s in create_request" % result.status_code)
         print(result.text)
@@ -418,67 +425,69 @@ def resolve_ticket(resolution_state="Done", assign_to_bot=True):
     transition_id = find_transition("Resolved")
     if transition_id != 0:
         update = {
-            'transition': {
-                'id': transition_id
-            },
-            'fields': {
-                'resolution': {
-                    'name': resolution_state
-                }
-            }
+            "transition": {"id": transition_id},
+            "fields": {"resolution": {"name": resolution_state}},
         }
         result = service_desk_request_post(
-            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET),
-            update)
+            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET), update
+        )
         if result.status_code != 204:
             post_comment(
                 "Unable to mark issue as Done. Error code %s and message '%s'"
-                % (result.status_code, result.text), False)
+                % (result.status_code, result.text),
+                False,
+            )
             post_comment(
-                "Transition ID was %s and resolution name was %s" % (
-                    transition_id, resolution_state), False)
+                "Transition ID was %s and resolution name was %s"
+                % (transition_id, resolution_state),
+                False,
+            )
 
 
 def assign_issue_to(person):
     """Assign the issue to the specified email address."""
-    update = {'name': person}
+    update = {"name": person}
     result = service_desk_request_put(
-        "%s/rest/api/2/issue/%s/assignee" %
-        (shared.globals.ROOT_URL, shared.globals.TICKET),
-        update)
+        "%s/rest/api/2/issue/%s/assignee"
+        % (shared.globals.ROOT_URL, shared.globals.TICKET),
+        update,
+    )
     # On Cloud, this can fail because of GDPR settings so we need to
     # take extra steps if that happens.
     if result.status_code == 400:
         # Check the error message
         error = result.json()
-        if "errorMessages" in error and \
-            error["errorMessages"][0] == GDPR_ERROR:
+        if "errorMessages" in error and error["errorMessages"][0] == GDPR_ERROR:
             result = assign_issue_to_account_id(person)
     # Either not the right error message or we've just tried using assign issue to account_id
     if result.status_code != 204:
         post_comment(
-            "Unable to assign issue to '%s'. Error code %s and message '%s'" %
-            (person, result.status_code, result.text), False)
+            "Unable to assign issue to '%s'. Error code %s and message '%s'"
+            % (person, result.status_code, result.text),
+            False,
+        )
 
 
 def assign_issue_to_account_id(person):
-    """ Convert the person's name to an anonymised account id and then assign issue. """
+    """Convert the person's name to an anonymised account id and then assign issue."""
     result = service_desk_request_get(
         "%s/rest/api/2/user/assignable/multiProjectSearch"
-        "?query=%s&projectKeys=%s" % (shared.globals.ROOT_URL, person, shared.globals.PROJECT)
+        "?query=%s&projectKeys=%s"
+        % (shared.globals.ROOT_URL, person, shared.globals.PROJECT)
     )
     if result.status_code != 200:
         return result
     # Should return us precisely one user ...
     data = result.json()
     if data == []:
-        return result # Not really helpful but the status code isn't 204 so we'll get a comment
+        return result  # Not really helpful but the status code isn't 204 so we'll get a comment
     account_id = data[0]["accountId"]
-    update = {'accountId': account_id}
+    update = {"accountId": account_id}
     return service_desk_request_put(
-        "%s/rest/api/2/issue/%s/assignee" %
-        (shared.globals.ROOT_URL, shared.globals.TICKET),
-        update)
+        "%s/rest/api/2/issue/%s/assignee"
+        % (shared.globals.ROOT_URL, shared.globals.TICKET),
+        update,
+    )
 
 
 def transition_request_to(name):
@@ -490,35 +499,39 @@ def transition_request_to(name):
         return
     transition_id = find_transition(lower_name)
     if transition_id != 0:
-        update = {'transition': {'id': transition_id}}
+        update = {"transition": {"id": transition_id}}
         result = service_desk_request_post(
-            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET),
-            update)
+            TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET), update
+        )
         if result.status_code != 204:
             post_comment(
                 "Transition '%s' failed with error code %s and message '%s'"
-                % (name, result.status_code, result.text), False)
+                % (name, result.status_code, result.text),
+                False,
+            )
 
 
 def find_transition(transition_name):
-    """ Find a transition to get to the desired state and return the matching ID. """
+    """Find a transition to get to the desired state and return the matching ID."""
     url = TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET)
     lower_name = transition_name.lower()
     result = service_desk_request_get(url)
     if result.status_code != 200:
         post_comment(
-            "Unable to get transitions for issue. Error code %s and message '%s'" %
-            (result.status_code, result.text),
-            False)
+            "Unable to get transitions for issue. Error code %s and message '%s'"
+            % (result.status_code, result.text),
+            False,
+        )
         return 0
     j = result.json()
-    for transition in j['transitions']:
-        if transition['to']['name'].lower() == lower_name:
-            return transition['id']
+    for transition in j["transitions"]:
+        if transition["to"]["name"].lower() == lower_name:
+            return transition["id"]
 
-    msg = (
-        "Unable to find transition to get to state '%s' for issue %s\r\n" %
-        (transition_name, shared.globals.TICKET))
+    msg = "Unable to find transition to get to state '%s' for issue %s\r\n" % (
+        transition_name,
+        shared.globals.TICKET,
+    )
     msg += "Current status is %s\r\n" % get_current_status()
     msg += result.text
     post_comment(msg, False)
@@ -526,21 +539,24 @@ def find_transition(transition_name):
 
 
 def get_current_status():
-    """ Return the name of the ticket's current status. """
+    """Return the name of the ticket's current status."""
     url = "%s/rest/api/2/issue/%s?fields=status" % (
-        shared.globals.ROOT_URL, shared.globals.TICKET)
+        shared.globals.ROOT_URL,
+        shared.globals.TICKET,
+    )
     result = service_desk_request_get(url)
     if result.status_code != 200:
-        print("Unable to get current status. Request status code is ", result.status_code)
+        print(
+            "Unable to get current status. Request status code is ", result.status_code
+        )
         return None
     j = result.json()
     return j["fields"]["status"]["name"]
 
 
 def central_comment_handler(
-        supported_public_keywords,
-        supported_private_keywords,
-        transition_if_resolved=None):
+    supported_public_keywords, supported_private_keywords, transition_if_resolved=None
+):
     """
     For a given set of keywords, figure out if they match or not based on
     the last comment posted.
@@ -557,14 +573,16 @@ def central_comment_handler(
     if status is None:
         return (None, None)
 
-    if (get_current_status() == "Resolved" and
-            not user_is_bot(comment["author"]) and
-            transition_if_resolved is not None):
+    if (
+        get_current_status() == "Resolved"
+        and not user_is_bot(comment["author"])
+        and transition_if_resolved is not None
+    ):
         transition_request_to(transition_if_resolved)
 
-    if not(comment['public']) and keyword in supported_private_keywords:
+    if not (comment["public"]) and keyword in supported_private_keywords:
         return (comment, keyword)
-    if comment['public'] and keyword in supported_public_keywords:
+    if comment["public"] and keyword in supported_public_keywords:
         return (comment, keyword)
 
     return (comment, None)
@@ -578,8 +596,11 @@ def get_keyword_from_comment(comment):
     # Keywords are always single words so we just take the first word and
     # return it in lower-case.
     # More complicated than using just split because we don't want punctuation.
-    return "".join((char if char.isalpha() else " ") for
-                   char in comment['body']).split()[0].lower()
+    return (
+        "".join((char if char.isalpha() else " ") for char in comment["body"])
+        .split()[0]
+        .lower()
+    )
 
 
 def get_latest_comment():
@@ -592,18 +613,19 @@ def get_latest_comment():
     start = 0
     while True:
         result = service_desk_request_get(
-            "%s/rest/servicedeskapi/request/%s/comment?start=%s" % (
-                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+            "%s/rest/servicedeskapi/request/%s/comment?start=%s"
+            % (shared.globals.ROOT_URL, shared.globals.TICKET, start)
+        )
         if result.status_code != 200:
             return None
         j = result.json()
         # If we're on the last page of comments, return the last comment!
-        if j['isLastPage']:
-            if len(j['values']) == 0:
+        if j["isLastPage"]:
+            if len(j["values"]) == 0:
                 return None
-            return j['values'][-1]
+            return j["values"][-1]
         # Get the next batch of comments
-        start += j['size']
+        start += j["size"]
 
 
 def deassign_ticket_if_appropriate(last_comment, transition_to=None):
@@ -631,47 +653,57 @@ def deassign_ticket_if_appropriate(last_comment, transition_to=None):
 
 def assign_approvers(approver_list, custom_field, add_to_request_participants=True):
     """
-        Add the list of approvers to the specified custom field,
-        making them request participants as well if needed.
+    Add the list of approvers to the specified custom field,
+    making them request participants as well if needed.
     """
     flat_list = shared_ldap.flatten_list(approver_list)
     approvers = {"fields": {custom_field: []}}
     for item in flat_list:
         if item != "":
+            item_email = None
             # Cope with being sent email addresses already
             if "@" in item:
                 item_email = item
             else:
                 obj = shared_ldap.get_object(item, ["mail"])
-                item_email = obj.mail.value
+                if obj is not None:
+                    item_email = obj.mail.value
             if item_email is not None:
-                approvers["fields"][custom_field].append(
-                    {'name': item_email})
+                item_account_id = find_account_id(item_email)
+                if item_account_id is not None:
+                    approvers["fields"][custom_field].append({"id": item_account_id})
                 if add_to_request_participants:
                     # Add them as a request participant so that they get copies of
                     # any comment notifications.
                     add_request_participant(item_email)
-    result = service_desk_request_put(
-        shared.globals.TICKET_DATA["self"],
-        approvers)
+    print(shared.globals.TICKET_DATA["self"])
+    print(f"assign_approvers: {json.dumps(approvers)}")
+    result = service_desk_request_put(shared.globals.TICKET_DATA["self"], approvers)
+    print(result.status_code)
+    print(result.text)
     if result.status_code != 204:
         post_comment(
             "Got error %s (%s) when setting the"
-            " approvers:\r\n{panel}%s{panel}\r\n" % (
-                result.text, result.status_code, approvers), False)
+            " approvers:\r\n{panel}%s{panel}\r\n"
+            % (result.text, result.status_code, approvers),
+            False,
+        )
 
 
 def set_summary(summary):
     """Set the summary of the issue to the specified string."""
-    data = '{"update":{"summary":[{"set": "%s"}]}}' % summary
-    service_desk_request_put("%s/rest/api/2/issue/%s" % (
-        shared.globals.ROOT_URL, shared.globals.TICKET), data)
+    data = {"update": {"summary": [{"set": summary}]}}
+    result = service_desk_request_put(
+        f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}",
+        data,
+    )
+    print(f"set_summary: {result.status_code} {result.text}")
     # Update our copy of the ticket data to reflect the new summary
     shared.globals.TICKET_DATA["fields"]["summary"] = summary
 
 
 def find_account_id(email_address: str) -> Union[str, None]:
-    """ Look up the email address and return the corresponding account ID or None if not found """
+    """Look up the email address and return the corresponding account ID or None if not found"""
     result = service_desk_request_get(
         f"{shared.globals.ROOT_URL}/rest/api/2/user/search?query={email_address}"
     )
@@ -680,6 +712,16 @@ def find_account_id(email_address: str) -> Union[str, None]:
     data = result.json()
     if len(data) == 1:
         return data[0]["accountId"]
+    return None
+
+
+def find_account_from_id(account_id: str):
+    """Look up the specified account ID and return the corresponding user or None if not found"""
+    result = service_desk_request_get(
+        f"{shared.globals.ROOT_URL}/rest/api/2/user?accountId={account_id}"
+    )
+    if result.status_code == 200:
+        return result.json()
     return None
 
 
@@ -694,19 +736,21 @@ def add_request_participant(email_address):
     if account_id is None:
         post_comment(
             f"Unable to add {email_address} as request participant to {shared.globals.TICKET}. User not found.",
-            False
+            False,
         )
         return
-    update = {'accountIds': [account_id]}
+    update = {"accountIds": [account_id]}
     result = service_desk_request_post(
-        "%s/rest/servicedeskapi/request/%s/participant" % (
-            shared.globals.ROOT_URL, shared.globals.TICKET), update)
+        "%s/rest/servicedeskapi/request/%s/participant"
+        % (shared.globals.ROOT_URL, shared.globals.TICKET),
+        update,
+    )
     if result.status_code != 200:
         post_comment(
             "Unable to add %s as request "
-            "participant to %s. Error code %s and message '%s'" % (
-                email_address, shared.globals.TICKET, result.status_code, result.text),
-            False
+            "participant to %s. Error code %s and message '%s'"
+            % (email_address, shared.globals.TICKET, result.status_code, result.text),
+            False,
         )
 
 
@@ -718,16 +762,17 @@ def is_request_participant(email_address):
     start = 0
     while True:
         result = service_desk_request_get(
-            "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
-                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+            "%s/rest/servicedeskapi/request/%s/participant?start=%s"
+            % (shared.globals.ROOT_URL, shared.globals.TICKET, start)
+        )
         if result.status_code != 200:
             return False
         j = result.json()
-        for value in j['values']:
-            if value['emailAddress'] == email_address:
+        for value in j["values"]:
+            if value["emailAddress"] == email_address:
                 return True
-        if not j['isLastPage']:
-            start += j['size']
+        if not j["isLastPage"]:
+            start += j["size"]
         else:
             return False
 
@@ -738,25 +783,26 @@ def get_request_participants():
     start = 0
     while True:
         result = service_desk_request_get(
-            "%s/rest/servicedeskapi/request/%s/participant?start=%s" % (
-                shared.globals.ROOT_URL, shared.globals.TICKET, start))
+            "%s/rest/servicedeskapi/request/%s/participant?start=%s"
+            % (shared.globals.ROOT_URL, shared.globals.TICKET, start)
+        )
         if result.status_code != 200:
             return []
         j = result.json()
-        for value in j['values']:
-            list_of_participants.append(value['emailAddress'])
-        if not j['isLastPage']:
-            start += j['size']
+        for value in j["values"]:
+            list_of_participants.append(value["emailAddress"])
+        if not j["isLastPage"]:
+            start += j["size"]
         else:
             return list_of_participants
 
 
 def sd_headers():
-    """ Return the required headers for Service Desk. """
+    """Return the required headers for Service Desk."""
     return {
-        'Authorization': 'Basic %s' % shared.globals.SD_AUTH,
-        'content-type': 'application/json',
-        'X-ExperimentalApi': 'true'
+        "Authorization": f"Basic {shared.globals.SD_AUTH}",
+        "Content-Type": "application/json",
+        "X-ExperimentalApi": "true",
     }
 
 
