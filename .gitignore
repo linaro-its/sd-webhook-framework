@@ -10,3 +10,4 @@ cf_cachefile
 configuration.jsonc
 rt_handlers/
 shared/sentry_config.py
+coverage.xml
