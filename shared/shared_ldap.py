@@ -777,3 +777,12 @@ def get_manager_from_dn(distinguished_name):
         if mgr_email is not None and mgr_email.mail.values != []:
             return mgr_email.mail.values[0]
     return None
+
+
+def get_email_address(user_dn):
+    """For the given user_dn, provide the email address from LDAP."""
+    result = get_object(user_dn, ["mail"])
+    if result is not None:
+        return result.mail.value
+    print("Either can't find %s or no mail attribute." % user_dn)
+    return None
