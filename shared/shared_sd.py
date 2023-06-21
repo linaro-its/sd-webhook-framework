@@ -702,6 +702,21 @@ def set_summary(summary):
     shared.globals.TICKET_DATA["fields"]["summary"] = summary
 
 
+def set_customfield(custom_field, value):
+    """Set the specified custom field to the specified value."""
+    data = {
+        "fields": {
+            custom_field: {"value": value}
+        }
+    }
+    print(f"set_customfield: {data}")
+    result = service_desk_request_put(
+        f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}",
+        data
+    )
+    print(f"set_customfield: {result.status_code} {result.text}")
+
+
 def find_account_id(email_address: str) -> Union[str, None]:
     """Look up the email address and return the corresponding account ID or None if not found"""
     result = service_desk_request_get(
