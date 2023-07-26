@@ -51,6 +51,18 @@
     //
     // or specify the following Vault parameter:
     // "vault_bot_name": "secret/blob/bot_name",
+    //
+    // There seems to be a race condition in Jira Service Management Cloud when
+    // using the APIs to set the approver list. Atlassian's suggested workaround
+    // is to have an automation rule that is a webhook to set the Approvers.
+    //
+    // If the following value is defined, the framework will trigger the webhook
+    // rather than try to use the API for any attempts to set the specified
+    // custom field.
+    // "jsm_customfield_webhook": {
+    //     "cf_xxxx": "URL-to-xxxx-webhook",
+    //     "cf_yyyy": "URL-to-yyyy-webhook"
+    // },
 
     // GOOGLE
     //
