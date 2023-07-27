@@ -72,7 +72,7 @@ def initialise_shared_sd():
         "emailAddress" not in TICKET_DATA["fields"]["reporter"]):
         raise MalformedIssueError("Missing reporter details in project")
     issue_url = TICKET_DATA["self"].split("/", 3)
-    ROOT_URL = "%s//%s" % (issue_url[0], issue_url[2])
+    ROOT_URL = f"{issue_url[0]}//{issue_url[2]}"
     TICKET = TICKET_DATA["key"]
     PROJECT = TICKET_DATA["fields"]["project"]["key"]
     REPORTER = shared_sd.reporter_email_address(TICKET_DATA)
@@ -89,7 +89,7 @@ def validate_cf_config():
     if "cf_cachefile" not in CONFIGURATION:
         # Default to using the cache file in the repo.
         basedir = os.path.dirname(os.path.dirname(__file__))
-        CONFIGURATION["cf_cachefile"] = "%s/cf_cachefile" % basedir
+        CONFIGURATION["cf_cachefile"] = f"{basedir}/cf_cachefile"
 
 
 def validate_vault_tag(tag, required):
@@ -97,13 +97,13 @@ def validate_vault_tag(tag, required):
     if tag in CONFIGURATION:
         if not required:
             raise OverlappingCredentials(
-                "Can't have '%s' when a password has been specified "
-                "in the configuration file" % tag
+                f"Can't have '{tag}' when a password has been specified "
+                "in the configuration file"
             )
     else:
         if required:
             raise MissingCredentials(
-                "Missing '%s' in configuration file" % tag)
+                f"Missing '{tag}' in configuration file")
 
 
 def validate_vault_config(vault_user_tag, required):
@@ -117,7 +117,7 @@ def validate_user_password_config(user_tag, password_tag, vault_user_tag):
     """ Check the user/password configuration is valid. """
     if user_tag not in CONFIGURATION:
         raise MissingCredentials(
-            "Missing '%s' in configuration file" % user_tag)
+            f"Missing '{user_tag}' in configuration file")
     if password_tag not in CONFIGURATION:
         # Make sure that all of the Vault values are there
         validate_vault_config(vault_user_tag, True)
@@ -146,9 +146,9 @@ def initialise_config():
     # expect to find the configuration file one level up.
     basedir = os.path.dirname(os.path.dirname(__file__))
     config_file = os.path.join(basedir, "configuration.jsonc")
-    print("Reading config from %s" % config_file, file=sys.stderr)
+    print(f"Reading config from {config_file}", file=sys.stderr)
     try:
-        with open(config_file) as handle:
+        with open(config_file, encoding="utf-8") as handle:
             CONFIGURATION = json.loads(json_minify(handle.read()))
     except json.decoder.JSONDecodeError as exc:
         raise MalformedJSON("Unable to decode configuration file successfully") from exc
@@ -158,15 +158,13 @@ def initialise_config():
 
 def get_google_credentials():
     """ Retrieve the Google JSON blob """
-    global CONFIGURATION
     if "google_json_file" not in CONFIGURATION:
         return json.loads(shared_vault.get_secret(CONFIGURATION["vault_google_name"]))
-    return json.load(open(CONFIGURATION["google_json_file"]))
+    return json.load(open(CONFIGURATION["google_json_file"], encoding="utf-8"))
 
 
 def get_ldap_credentials():
     """ Retrieve the credentials required by the LDAP code """
-    global CONFIGURATION
     if "ldap_password" not in CONFIGURATION:
         return CONFIGURATION["ldap_user"], shared_vault.get_secret(CONFIGURATION["vault_ldap_name"])
     return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
@@ -174,7 +172,6 @@ def get_ldap_credentials():
 
 def get_sd_credentials():
     """ Retrieve the credentials required by SD_AUTH """
-    global CONFIGURATION
     if "bot_password" not in CONFIGURATION:
         # Try API key first
         pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"], "api-token")
@@ -186,7 +183,6 @@ def get_sd_credentials():
 
 def get_email_credentials():
     """ Retrieve the credentials required when sending email """
-    global CONFIGURATION
     if "mail_user" not in CONFIGURATION:
         return None, None
     # We already known (from validate_auth_config) that we can only have
@@ -201,7 +197,7 @@ def initialise_sd_auth():
     global SD_AUTH
     name, password = get_sd_credentials()
     # Construct a string of the form username:password
-    combo = "%s:%s" % (name, password)
+    combo = f"{name}:{password}"
     # Encode it to Base64
     combo_bytes = combo.encode('ascii')
     base64_bytes = base64.b64encode(combo_bytes)
