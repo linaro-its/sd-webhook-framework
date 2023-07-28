@@ -145,7 +145,8 @@ def initialise_config():
     # All of the webhook code is in a sub-directory so we
     # expect to find the configuration file one level up.
     basedir = os.path.dirname(os.path.dirname(__file__))
-    config_file = os.path.join(basedir, "configuration.jsonc")
+    filename = os.getenv("config_file", "configuration.jsonc")
+    config_file = os.path.join(basedir, filename)
     print(f"Reading config from {config_file}", file=sys.stderr)
     try:
         with open(config_file, encoding="utf-8") as handle:
