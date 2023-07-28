@@ -31,7 +31,7 @@ def get_vault_secret(secret_path: str, iam_role: str, url: str) -> str:
     requests.post(
         f"{url}/v1/auth/token/revoke-self",
         headers=header)
-    response.raise_for_status
+    response.raise_for_status()
     return secret["data"]
 
 def get_secret(secret_path, key="pw"):
