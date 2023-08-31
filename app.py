@@ -243,6 +243,9 @@ def initialise_handler():
             False
         )
         return None
+    if reqtype is None:
+        print(f"Unable to determine request type")
+        return None
     #
     # Work out which handler to use, if there is one.
     filename = handler_filename(dir_path, reqtype)
