@@ -20,9 +20,9 @@ Jinja2 = ">=2.10.1" # Fixes CVE-2019-10906
 requests = ">=2.20.0"
 flask = "*"
 json-minify = "*"
-vault-auth = {git = "https://github.com/linaro-its/vault_auth.git"}
 ldap3 = "*"
 unidecode = "*"
 sentry-sdk = {extras = ["flask"], version = "*"}
 google-api-python-client = "*"
 paramiko = "*"
+hvac = "*"
