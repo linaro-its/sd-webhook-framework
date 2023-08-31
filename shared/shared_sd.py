@@ -140,6 +140,7 @@ def ticket_request_type(ticket_data):
         raise CustomFieldLookupFailure("Failed to find the request type information")
     if crt_cf not in ticket_data["fields"]:
         raise MalformedIssueError(f"Failed to find '{crt_cf}' in issue fields")
+    print(f"Mapped request type to {crt_cf}")
     if ticket_data["fields"][crt_cf] is None:
         # Probably a Jira issue not a SD issue
         return None
@@ -478,14 +479,14 @@ def assign_issue_to_account_id(person):
     )
 
 
-def transition_request_to(name):
+def transition_request_to(name, check_transition_name=False, check_destination_name=True):
     """Transition the issue to the specified transition name."""
     lower_name = name.lower()
     current_state = get_current_status()
     if current_state is not None and current_state.lower() == lower_name:
         # Nothing to do.
         return
-    transition_id = find_transition(lower_name)
+    transition_id = find_transition(lower_name, check_transition_name, check_destination_name)
     if transition_id != 0:
         update = {"transition": {"id": transition_id}}
         result = service_desk_request_post(
@@ -501,7 +502,7 @@ def transition_request_to(name):
             print(f"{shared.globals.TICKET}: transitioned ticket to {name}")
 
 
-def find_transition(transition_name):
+def find_transition(transition_name, check_transition_name=False, check_destination_name=True):
     """Find a transition to get to the desired state and return the matching ID."""
     url = TRANSITION_API % (shared.globals.ROOT_URL, shared.globals.TICKET)
     lower_name = transition_name.lower()
@@ -515,7 +516,9 @@ def find_transition(transition_name):
         return 0
     j = result.json()
     for transition in j["transitions"]:
-        if transition["to"]["name"].lower() == lower_name:
+        if check_destination_name and transition["to"]["name"].lower() == lower_name:
+            return transition["id"]
+        if check_transition_name and transition["name"].lower() == lower_name:
             return transition["id"]
 
     msg = "Unable to find transition to get to state "
