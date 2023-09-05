@@ -6,13 +6,14 @@ The credentials used by this code must be sufficient for all of
 the functions required, e.g. creating accounts.
 """
 
+# pylint: disable=no-member, broad-except
+
 from ldap3 import (BASE, DSA, LEVEL, MODIFY_ADD, MODIFY_DELETE, MODIFY_REPLACE,
                    SUBTREE, Connection, Server)
 from unidecode import unidecode
 
 import shared.globals
-import shared.shared_google as shared_google
-
+from shared import shared_google
 
 MAILING_OU = ",ou=mailing,"
 CN_PATH = "cn=%s,%s"
@@ -69,7 +70,7 @@ def string_combo(str1, str2, separator):
     elif str2 is None or str2 == "":
         return str1
     else:
-        return "%s%s%s" % (str1, separator, str2)
+        return f"{str1}{separator}{str2}"
 
 
 def cleanup_if_gmail(email_address):
@@ -81,7 +82,7 @@ def cleanup_if_gmail(email_address):
     """
     parts = email_address.split('@')
     if parts[1] == "gmail.com":
-        email_address = "%s@%s" % (parts[0].replace('.', ''), parts[1])
+        email_address = f"{parts[0].replace('.', '')}@{parts[1]}"
     return email_address
 
 
@@ -95,7 +96,7 @@ def search_filter(ldap_conn, ldap_filter, filter_param):
     safe_filter_param = safe_filter_param.replace(")", "\\29")
     return ldap_conn.search(
         base_dn(),
-        search_filter="(%s=%s)" % (ldap_filter, safe_filter_param),
+        search_filter=f"({ldap_filter}={safe_filter_param})",
         search_scope=SUBTREE
     )
 
@@ -147,7 +148,7 @@ def get_best_uid(connection, uid):
             search_uid += str(index)
         if connection.search(
                 base_dn(),
-                search_filter="(uid=%s)" % search_uid,
+                search_filter=f"(uid={search_uid})",
                 search_scope=SUBTREE):
             index += 1
         else:
@@ -165,8 +166,8 @@ def find_best_ou_for_email(email_address):
     domain = email_address.split("@")[1]
     with get_ldap_connection() as conn:
         if conn.search(
-                "ou=accounts,%s" % base_dn(),
-                search_filter="(mail=%s)" % domain,
+                f"ou=accounts,{base_dn()}",
+                search_filter=f"(mail={domain})",
                 search_scope=LEVEL):
             return conn.entries[0].entry_dn
     default_ou = shared.globals.config("ldap_default_account_ou")
@@ -193,7 +194,7 @@ def get_next_id_number(obj_class, id_attr):
     with get_ldap_connection() as conn:
         search_parameters = {
             'search_base': base_dn(),
-            'search_filter': '(objectclass=%s)' % obj_class,
+            'search_filter': f'(objectclass={obj_class})',
             'attributes': [id_attr]
         }
         while True:
@@ -239,7 +240,7 @@ def create_account(first_name, family_name, email_address, password=None):
         ],
         "cn": email_address,
         "gidNumber": "10000",
-        "homeDirectory": "/home/%s" % uid,
+        "homeDirectory": f"/home/{uid}",
         "sn": family_name.encode("utf-8"),
         "mail": email_address,
         "loginShell": "/bin/bash",
@@ -251,9 +252,9 @@ def create_account(first_name, family_name, email_address, password=None):
         add_record["userPassword"] = password
     with get_ldap_connection() as conn:
         if conn.add(
-                "uid=%s,%s" % (uid, org_unit),
+                f"uid={uid},{org_unit}",
                 attributes=add_record):
-            return "uid=%s,%s" % (uid, org_unit)
+            return f"uid={uid},{org_unit}"
     # Failed to create the account
     return None
 
@@ -279,7 +280,7 @@ def create_group(name, description, display_name, address, owners):
     # Figure out where to create this object
     path = shared.globals.config("ldap_security_groups")
     if path is not None:
-        path = "%s,%s" % (path, BASE_DN)
+        path = f"{path},{BASE_DN}"
         with get_ldap_connection() as conn:
             if not conn.add(
                 CN_PATH % (name, path),
@@ -294,7 +295,7 @@ def create_group(name, description, display_name, address, owners):
 
     path = shared.globals.config("ldap_mailing_groups")
     if path is not None:
-        path = "%s,%s" % (path, BASE_DN)
+        path = f"{path},{BASE_DN}"
         with get_ldap_connection() as conn:
             if not conn.add(
                 CN_PATH % (name, path),
@@ -330,7 +331,7 @@ def is_dn_in_group(group_name, user_dn, recurse=False):
     # See if there are any groups nested in this group. The use of
     # the uniqueMember filter ensures we only get the mailing list.
     group_details = find_matching_objects(
-        "(&(cn=%s)(uniqueMember=*))" % group_name,
+        f"(&(cn={group_name})(uniqueMember=*))",
         ["uniqueMember"])
     if group_details is None:
         # Shouldn't happen as we know the group exists
@@ -355,7 +356,7 @@ def parameterised_member_of_group(
     with get_ldap_connection() as conn:
         return conn.search(
             grp_dn,
-            search_filter="(%s=%s)" % (member_attribute, member_value),
+            search_filter=f"({member_attribute}={member_value})",
             search_scope=BASE)
 
 
@@ -396,7 +397,7 @@ def parameterised_add_to_group(
         }
         # Calculate the DN.
         grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
-        print("Adding %s as a %s attribute to %s" % (member_value, member_attribute, grp_dn))
+        print(f"Adding {member_value} as a {member_attribute} attribute to {grp_dn}")
         result = conn.modify(grp_dn, change)
         if not result:
             print("Group modification failed")
@@ -505,7 +506,7 @@ def parameterised_remove_from_group(
         }
         # Calculate the DN.
         grp_dn = parameterised_build_group_dn(group_name, group_location_tag)
-        print("Removing %s as a %s attribute from %s" % (member_value, member_attribute, grp_dn))
+        print(f"Removing {member_value} as a {member_attribute} attribute from {grp_dn}")
         result = conn.modify(grp_dn, change)
         if not result:
             print("Group modification failed")
@@ -646,7 +647,7 @@ def find_group(name, attributes):
     if "@" not in name:
         # We don't have an email address so try to get one
         result = find_matching_objects(
-            "(&(objectClass=groupOfUniqueNames)(cn=%s))" % name,
+            f"(&(objectClass=groupOfUniqueNames)(cn={name}))",
             ["mail"]
         )
         if result is None:
@@ -662,7 +663,7 @@ def find_group(name, attributes):
     # Now get the values for the specified attributes for
     # this group.
     result = find_matching_objects(
-        "(&(objectClass=groupOfUniqueNames)(mail=%s))" % name,
+        f"(&(objectClass=groupOfUniqueNames)(mail={name}))",
         attributes
     )
     if result is None:
@@ -739,13 +740,13 @@ def find_single_object_from_email(email_address):
     email address. Return None if no match or more than 1 match.
     """
     result = find_matching_objects(
-        "(&(objectClass=groupOfUniqueNames)(mail=%s))" % email_address,
+        f"(&(objectClass=groupOfUniqueNames)(mail={email_address}))",
         ["cn"])
     if result is not None and len(result) == 1:
         return result[0].entry_dn
 
     result = find_matching_objects(
-        "(&(objectClass=posixAccount)(mail=%s))" % cleanup_if_gmail(email_address),
+        f"(&(objectClass=posixAccount)(mail={cleanup_if_gmail(email_address)}))",
         ["cn"])
     if result is not None and len(result) == 1:
         return result[0].entry_dn
@@ -753,7 +754,7 @@ def find_single_object_from_email(email_address):
     # Linaro uses the aRecord attribute to record email aliases so look
     # there as well ...
     result = find_matching_objects(
-        "(&(objectClass=posixAccount)(aRecord=%s))" % cleanup_if_gmail(email_address),
+        f"(&(objectClass=posixAccount)(aRecord={cleanup_if_gmail(email_address)}))",
         ["cn"])
     if result is not None and len(result) == 1:
         return result[0].entry_dn
@@ -761,7 +762,7 @@ def find_single_object_from_email(email_address):
     # If still no match, try again without the GMail cleanup just in case
     # a GMail account was added without the cleanup.
     result = find_matching_objects(
-        "(&(objectClass=posixAccount)(mail=%s))" % email_address,
+        f"(&(objectClass=posixAccount)(mail={email_address}))",
         ["cn"])
     if result is not None and len(result) == 1:
         return result[0].entry_dn
@@ -784,5 +785,16 @@ def get_email_address(user_dn):
     result = get_object(user_dn, ["mail"])
     if result is not None:
         return result.mail.value
-    print("Either can't find %s or no mail attribute." % user_dn)
+    print(f"Either can't find {user_dn} or no mail attribute.")
     return None
+
+
+def add_member_to_group(group_cn, member_dn):
+    """ Add the specified LDAP entity to the group as appropriate """
+    # Only add people (uid=*) to the security group. Add both users and groups
+    # to the mail group.
+    print(f"Being asked to add {member_dn} to {group_cn}")
+    if member_dn.split("=", 1)[0] == "uid":
+        add_to_security_group(group_cn, member_dn)
+    print("Adding to mail group")
+    add_to_mailing_group(group_cn, member_dn)
