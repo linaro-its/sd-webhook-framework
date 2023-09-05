@@ -26,3 +26,4 @@ sentry-sdk = {extras = ["flask"], version = "*"}
 google-api-python-client = "*"
 paramiko = "*"
 hvac = "*"
+boto3 = "*"
