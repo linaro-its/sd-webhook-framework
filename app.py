@@ -239,12 +239,12 @@ def initialise_handler():
         reqtype = shared_sd.ticket_request_type(shared.globals.TICKET_DATA)
     except shared_sd.CustomFieldLookupFailure as caught_error:
         shared_sd.post_comment(
-            "%s. Please check the configuration and logs." % str(caught_error),
+            f"{str(caught_error)}. Please check the configuration and logs.",
             False
         )
         return None
     if reqtype is None:
-        print(f"Unable to determine request type")
+        print("Unable to determine request type")
         return None
     #
     # Work out which handler to use, if there is one.
