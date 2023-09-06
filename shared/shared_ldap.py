@@ -101,6 +101,12 @@ def search_filter(ldap_conn, ldap_filter, filter_param):
     )
 
 
+def delete_object(entry_dn):
+    """ Delete the specified object from LDAP """
+    with get_ldap_connection() as conn:
+        conn.delete(entry_dn)
+
+
 def find_from_attribute(attribute, value):
     """
     Try to find a LDAP object where the specified attribute has the
