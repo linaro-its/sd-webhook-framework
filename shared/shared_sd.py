@@ -660,6 +660,7 @@ def assign_approvers(approver_list, custom_field, add_to_request_participants=Tr
             if item_email is not None:
                 item_account_id = find_account_id(item_email)
                 if item_account_id is not None:
+                    print(f"Adding {item_account_id} for {item_email}")
                     approvers["fields"][custom_field].append({"id": item_account_id})
                 if add_to_request_participants:
                     # Add them as a request participant so that they get copies of
@@ -679,15 +680,17 @@ def trigger_jsm_customfield_webhook(custom_field, approvers):
     print("trigger_jsm_customfield_webhook")
     webhook_url = shared.globals.CONFIGURATION["jsm_customfield_webhook"][custom_field]
     trigger_url = f"{webhook_url}?issue={shared.globals.TICKET}"
+    # Build a list of the IDs to be added to the custom field
+    approver_ids = []
     for approver in approvers:
-        body = {
-            "id": approver["id"]
-        }
-        print(body)
-        result = service_desk_request_post(trigger_url, body)
-        print(result.status_code)
-        print(result.text)
-
+        approver_ids.append(approver["id"])
+    body = {
+        "id": approver_ids
+    }
+    print(body)
+    result = service_desk_request_post(trigger_url, body)
+    print(result.status_code)
+    print(result.text)
 
 def update_approvers_via_api(approvers):
     """Use the Jira API to update the approvers field"""
