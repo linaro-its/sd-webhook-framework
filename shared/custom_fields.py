@@ -75,6 +75,7 @@ def get_customfield_id_from_cloud(field_name):
     for field in data:
         if field["name"] == field_name:
             return field["id"]
+    print(f"WARNING! Unable to find custom field called {field_name}")
     return None
 
 
