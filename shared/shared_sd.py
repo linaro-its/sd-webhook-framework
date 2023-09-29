@@ -438,6 +438,7 @@ def resolve_ticket(resolution_state="Done", assign_to_bot=True):
 
 def assign_issue_to(person):
     """Assign the issue to the specified email address."""
+    print(f"assign_issue_to({person})")
     update = {"name": person}
     result = service_desk_request_put(
         f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}/assignee",
@@ -461,22 +462,51 @@ def assign_issue_to(person):
 
 def assign_issue_to_account_id(person):
     """Convert the person's name to an anonymised account id and then assign issue."""
+    print(f"assign_issue_to_account_id({person})")
+
+    # The original mechanism of using multiProjectSearch to find users that issues
+    # could be assigned to wasn't working for the JSD Automation bot. A (temporary)
+    # alternative method has been devised - get a list of all of the users assignable
+    # for the current issue, iterate to match the email address and then assign it.
     result = service_desk_request_get(
-        f"{shared.globals.ROOT_URL}/rest/api/2/user/assignable/multiProjectSearch"
-        f"?query={person}&projectKeys={shared.globals.PROJECT}"
+        f"{shared.globals.ROOT_URL}/rest/api/3/user/assignable/search?issueKey={shared.globals.TICKET}"
     )
     if result.status_code != 200:
         return result
-    # Should return us precisely one user ...
+    # Iterate ...
     data = result.json()
-    if data == []:
-        return result  # Not really helpful but the status code isn't 204 so we'll get a comment
-    account_id = data[0]["accountId"]
-    update = {"accountId": account_id}
-    return service_desk_request_put(
-        f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}/assignee",
-        update,
-    )
+    for item in data:
+        if "emailAddress" in item and item["emailAddress"] == person:
+            account_id = item["accountId"]
+            update = {"accountId": account_id}
+            return service_desk_request_put(
+                f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}/assignee",
+                update,
+            )
+    # Failed to match
+    return result # Not really helpful but the status code isn't 204 so we'll get a comment
+
+    ### OLD METHOD
+    # result = service_desk_request_get(
+    #     f"{shared.globals.ROOT_URL}/rest/api/2/user/assignable/multiProjectSearch"
+    #     f"?query={person}&projectKeys={shared.globals.PROJECT}"
+    # )
+    # if result.status_code != 200:
+    #     return result
+    # # Should return us precisely one user ...
+    # data = result.json()
+    # print(f"{len(data)} results")
+    # if len(data) != 1:
+    #     for item in data:
+    #         print(item)
+    # if data == []:
+    #     return result  # Not really helpful but the status code isn't 204 so we'll get a comment
+    # account_id = data[0]["accountId"]
+    # update = {"accountId": account_id}
+    # return service_desk_request_put(
+    #     f"{shared.globals.ROOT_URL}/rest/api/2/issue/{shared.globals.TICKET}/assignee",
+    #     update,
+    # )
 
 
 def transition_request_to(name, check_transition_name=False, check_destination_name=True):
