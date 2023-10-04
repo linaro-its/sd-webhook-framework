@@ -55,7 +55,7 @@ def test_sentry():
 @APP.route('/create', methods=['POST'])
 def create():
     """ Triggered when a ticket is created. """
-    handler = initialise()
+    handler = initialise(False)
     if handler is None:
         print("/create: no handler")
     else:
@@ -73,7 +73,7 @@ def create():
 @APP.route('/comment', methods=['POST'])
 def comment():
     """ Triggered when a non-automation comment is added to a ticket. """
-    handler = initialise()
+    handler = initialise(True)
     if handler is None:
         print("/comment: no handler")
     else:
@@ -93,7 +93,7 @@ def comment():
 @APP.route('/org-change', methods=['POST'])
 def org_change():
     """ Triggered when the organizations change for a ticket. """
-    handler = initialise()
+    handler = initialise(False)
     if handler is None:
         print("/org-change: no handler")
     else:
@@ -111,7 +111,7 @@ def org_change():
 @APP.route('/transition', methods=['POST'])
 def ticket_transition():
     """ Triggered by SD Automation on transition. """
-    handler = initialise()
+    handler = initialise(False)
     if handler is None:
         print("/transition: no handler")
     else:
@@ -130,7 +130,7 @@ def ticket_transition():
 @APP.route('/jira-hook', methods=['POST'])
 def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
-    handler = initialise()
+    handler = initialise(False)
     if handler is None:
         print("/jira-hook: no handler")
     else:
@@ -281,13 +281,28 @@ def import_handler(dir_path, filename):
     return handler
 
 
-def initialise():
+def initialise(action_is_comment: bool):
     """ Initialise code and variables for this event. """
     try:
         shared.globals.initialise_config()
         shared.globals.initialise_ticket_data(request.json)
         shared.globals.initialise_sd_auth()
         shared.globals.initialise_shared_sd()
+        if shared.globals.REPORTER is None:
+            # Need to ensure that we don't react to ourselves posting the comment below.
+            if action_is_comment:
+                latest_comment = shared_sd.get_latest_comment()
+                if shared_sd.user_is_bot(latest_comment["author"]):
+                    print("Anonymously submitted ticket but ignoring automation-posted comment")
+                    return None
+            print("Anonymously submitted ticket - aborting")
+            shared_sd.post_comment(
+                "It is not possible to action this request. It has been submitted anonymously. "
+                "Please sign in to Service Desk and try again.",
+                True
+            )
+            shared_sd.resolve_ticket("Declined")
+            return None
     except Exception as exc:  # pylint: disable=broad-except
         print(exc)
         return None
