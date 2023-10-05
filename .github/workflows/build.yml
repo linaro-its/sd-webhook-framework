@@ -3,26 +3,22 @@ name: Build
 on:
   push:
     branches: [master]
-    paths-ignpre:
+    paths-ignore:
       - .github/workflows/pullrequest.yml
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - name: Fetch git repository
-        uses: actions/checkout@master
+      - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
-
-      - name: SonarQube Scan
-        uses: philips-software/sonar-scanner-action@master
-        with:
-          url: ${{ secrets.SONARQUBE_HOST }}
-          token: ${{ secrets.SONARQUBE_TOKEN }}
-          projectKey: sd-webhook-framework
-          projectName: SD Webhook Framework
-
-      - name: Cleanup scan
-        run: sudo rm -rf "$GITHUB_WORKSPACE/.scannerwork"
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
