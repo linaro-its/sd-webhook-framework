@@ -68,11 +68,21 @@ def initialise_shared_sd():
         raise MalformedIssueError("Missing 'project' in fields")
     if "key" not in TICKET_DATA["fields"]["project"]:
         raise MalformedIssueError("Missing 'key' in project")
-    if ("reporter" not in TICKET_DATA["fields"] or
-        "emailAddress" not in TICKET_DATA["fields"]["reporter"]):
-        raise MalformedIssueError("Missing reporter details in project")
+    # Need to initialise these here because we might
+    # need the Jira values if we call find_account_from_id
     issue_url = TICKET_DATA["self"].split("/", 3)
     ROOT_URL = f"{issue_url[0]}//{issue_url[2]}"
+    if ("reporter" not in TICKET_DATA["fields"] or
+        "emailAddress" not in TICKET_DATA["fields"]["reporter"]):
+        # Jira Cloud doesn't include the email address so try fetching it
+        # through the account ID
+        reporter = shared_sd.find_account_from_id(TICKET_DATA["fields"]["reporter"]["accountId"])
+        if "emailAddress" not in reporter:
+            print(json.dumps(TICKET_DATA))
+            raise MalformedIssueError("Missing reporter details in project")
+        # If we get it, store it in the ticket data in case something else
+        # wants it that way instead of using REPORTER
+        TICKET_DATA["fields"]["reporter"]["emailAddress"] = reporter["emailAddress"]
     TICKET = TICKET_DATA["key"]
     PROJECT = TICKET_DATA["fields"]["project"]["key"]
     REPORTER = shared_sd.reporter_email_address(TICKET_DATA)
