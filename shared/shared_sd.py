@@ -245,18 +245,26 @@ def get_user_field(user_blob, field_name):
     """
     if user_blob is None:
         print("get_user_field: passed None as user blob")
-        return
+        return None
     if field_name in user_blob:
         value = user_blob[field_name]
         if value is not None:
             return value
     print(f"get_user_field: querying self to retrieve {field_name}")
-    ub_self = user_blob["_links"]["self"]
-    print(ub_self)
+    if "self" in user_blob:
+        ub_self = user_blob["self"]
+    elif "_links" in user_blob and "self" in user_blob["_links"]:
+        ub_self = user_blob["_links"]["self"]
+    else:
+        print("get_user_field: unable to find self link in user blob")
+        print(user_blob)
+        return None
+    print(f"get_user_field: link to self: {ub_self}")
     result = service_desk_request_get(ub_self)
     if result.status_code != 200:
         print(
-            f"Got status {result.status_code} when querying {ub_self} for user field {field_name}"
+            f"get_user_field: got status {result.status_code} when "
+            f"querying {ub_self} for user field {field_name}"
         )
         return None
     data = result.json()
