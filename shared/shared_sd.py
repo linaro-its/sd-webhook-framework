@@ -246,16 +246,15 @@ def get_user_field(user_blob, field_name):
     if user_blob is None:
         print("get_user_field: passed None as user blob")
         return
-    if field_name not in user_blob:
-        print(f"get_user_field: requested field {field_name} is not in the blob")
-        print(json.dumps(user_blob))
-        return None
-    value = user_blob[field_name]
-    if value is not None:
-        return value
-    result = service_desk_request_get(user_blob["self"])
+    if field_name in user_blob:
+        value = user_blob[field_name]
+        if value is not None:
+            return value
+    print(f"get_user_field: querying self to retrieve {field_name}")
+    ub_self = user_blob["_links"]["self"]
+    print(ub_self)
+    result = service_desk_request_get(ub_self)
     if result.status_code != 200:
-        ub_self = user_blob["self"]
         print(
             f"Got status {result.status_code} when querying {ub_self} for user field {field_name}"
         )
@@ -837,7 +836,7 @@ def is_request_participant(email_address):
             return False
         j = result.json()
         for value in j["values"]:
-            if value["emailAddress"] == email_address:
+            if get_user_field(value, "emailAddress") == email_address:
                 return True
         if not j["isLastPage"]:
             start += j["size"]
