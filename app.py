@@ -57,12 +57,12 @@ def create():
     """ Triggered when a ticket is created. """
     handler = initialise(False)
     if handler is None:
-        print("/create: no handler")
+        print(f"{shared.globals.TICKET} /create: no handler")
     else:
-        print("/create: %s" % handler.CAPABILITIES)
+        print(f"{shared.globals.TICKET} /create: {handler.CAPABILITIES}")
     if handler is not None and "CREATE" in handler.CAPABILITIES:
         try:
-            print("Calling create handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            print(f"{shared.globals.TICKET} calling create handler", file=sys.stderr)
             save_ticket_data(handler)
             handler.create(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
@@ -75,14 +75,14 @@ def comment():
     """ Triggered when a non-automation comment is added to a ticket. """
     handler = initialise(True)
     if handler is None:
-        print("/comment: no handler")
+        print(f"{shared.globals.TICKET} /comment: no handler")
     else:
-        print("/comment: %s" % handler.CAPABILITIES)
+        print(f"{shared.globals.TICKET} /comment: {handler.CAPABILITIES}")
     if (handler is not None and
             "COMMENT" in handler.CAPABILITIES and
             not shared_sd.automation_triggered_comment(shared.globals.TICKET_DATA)):
         try:
-            print("Calling comment handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            print(f"{shared.globals.TICKET} calling comment handler", file=sys.stderr)
             save_ticket_data(handler)
             handler.comment(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
@@ -95,12 +95,12 @@ def org_change():
     """ Triggered when the organizations change for a ticket. """
     handler = initialise(False)
     if handler is None:
-        print("/org-change: no handler")
+        print(f"{shared.globals.TICKET} /org-change: no handler")
     else:
-        print("/org-change: %s" % handler.CAPABILITIES)
+        print(f"{shared.globals.TICKET} /org-change: {handler.CAPABILITIES}")
     if handler is not None and "ORGCHANGE" in handler.CAPABILITIES:
         try:
-            print("Calling org change handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            print(f"{shared.globals.TICKET} calling org change handler", file=sys.stderr)
             save_ticket_data(handler)
             handler.org_change(shared.globals.TICKET_DATA)
         except Exception:  # pylint: disable=broad-except
@@ -113,12 +113,12 @@ def ticket_transition():
     """ Triggered by SD Automation on transition. """
     handler = initialise(False)
     if handler is None:
-        print("/transition: no handler")
+        print(f"{shared.globals.TICKET} /transition: no handler")
     else:
-        print("/transition: %s" % handler.CAPABILITIES)
+        print(f"{shared.globals.TICKET} /transition: {handler.CAPABILITIES}")
     if handler is not None and "TRANSITION" in handler.CAPABILITIES:
         try:
-            print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
+            print(f"{shared.globals.TICKET} calling transition handler", file=sys.stderr)
             save_ticket_data(handler)
             new_status = shared.globals.TICKET_DATA["fields"]["status"]["name"]
             handler.transition(new_status, shared.globals.TICKET_DATA)
@@ -132,9 +132,9 @@ def jira_hook():
     """ Triggered when Jira itself (not Service Desk) fires a webhook event. """
     handler = initialise(False)
     if handler is None:
-        print("/jira-hook: no handler")
+        print(f"{shared.globals.TICKET} /jira-hook: no handler")
     else:
-        print("/jira-hook: %s" % handler.CAPABILITIES)
+        print(f"{shared.globals.TICKET} /jira-hook: {handler.CAPABILITIES}")
     if handler is not None:
         # Jira hook can be triggered for any sort of update to a ticket
         # so we need to look at what has changed. In *theory*, it is
@@ -152,13 +152,13 @@ def jira_hook():
             if got_handled_jira_event(handler.CAPABILITIES, status_result, assignee_result):
                 save_ticket_data(handler)
             if is_transition(handler.CAPABILITIES, status_result):
-                print("Calling transition handler for %s" % shared.globals.TICKET, file=sys.stderr)
+                print(f"Calling transition handler for {shared.globals.TICKET}", file=sys.stderr)
                 handler.transition(status_to, shared.globals.TICKET_DATA)
             if is_assignment(handler.CAPABILITIES, assignee_result):
-                print("Calling assignment handler for %s" % shared.globals.TICKET, file=sys.stderr)
+                print(f"Calling assignment handler for {shared.globals.TICKET}", file=sys.stderr)
                 handler.assignment(assignee_to, shared.globals.TICKET_DATA)
             if is_generic_jira(handler.CAPABILITIES, status_result, assignee_result):
-                print("Calling Jira hook handler for %s" % shared.globals.TICKET, file=sys.stderr)
+                print(f"Calling Jira hook handler for {shared.globals.TICKET}", file=sys.stderr)
                 # A generic handler might need to know what has changed so extract the change log
                 # if there is one.
                 changelog = request.json["changelog"] if "changelog" in request.json else None
@@ -212,8 +212,8 @@ def handler_filename(dir_path, reqtype):
             return shared.globals.CONFIGURATION["handlers"][reqtype]
         #
         # Is there a file with the right format name?
-        filename = "rt%s" % reqtype
-        if os.path.exists("%s/%s.py" % (dir_path, filename)):
+        filename = f"rt{reqtype}"
+        if os.path.exists(f"{dir_path}/{filename}.py"):
             return filename
     #
     # Is there a wildcard?
@@ -227,6 +227,7 @@ def handler_filename(dir_path, reqtype):
 
 def initialise_handler():
     """ Load the Python code handling this request type if possible. """
+    print("initialise_handler")
     #
     # Check that the handler directory exists.
     dir_path = os.path.dirname(os.path.abspath(__file__)) + "/rt_handlers"
@@ -252,22 +253,22 @@ def initialise_handler():
     if filename is not None:
         if dir_path not in sys.path:
             sys.path.insert(0, dir_path)
-        if os.path.exists("%s/%s.py" % (dir_path, filename)):
+        if os.path.exists(f"{dir_path}/{filename}.py"):
             return import_handler(dir_path, filename)
         print(
-            "ERROR! Cannot find '%s/%s.py'" % (dir_path, filename),
+            f"ERROR! Cannot find '{dir_path}/{filename}.py'",
             file=sys.stderr)
         return None
 
     print(
-        "Called to handle %s but no handler found." % reqtype,
+        f"Called to handle {reqtype} but no handler found.",
         file=sys.stderr)
     return None
 
 
 def import_handler(dir_path, filename):
     """ Load the desired handler. """
-    print("Loading '%s/%s.py' as handler for %s" % (dir_path, filename, shared.globals.TICKET),
+    print(f"Loading '{dir_path}/{filename}.py' as handler for {shared.globals.TICKET}",
           file=sys.stderr)
     handler = importlib.import_module(filename)
     # Make sure that the handler has a CAPABILITIES block
@@ -288,6 +289,7 @@ def initialise(action_is_comment: bool):
         shared.globals.initialise_ticket_data(request.json)
         shared.globals.initialise_sd_auth()
         shared.globals.initialise_shared_sd()
+        print("shared.globals initialisation complete")
         if shared.globals.REPORTER is None:
             # Need to ensure that we don't react to ourselves posting the comment below.
             if action_is_comment:
@@ -304,6 +306,7 @@ def initialise(action_is_comment: bool):
             shared_sd.resolve_ticket("Declined")
             return None
     except Exception as exc:  # pylint: disable=broad-except
+        print("An exception has occurred during the initialisation")
         print(exc)
         return None
     return initialise_handler()
