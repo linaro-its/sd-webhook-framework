@@ -3,8 +3,11 @@
 import json
 import boto3
 
+import shared.globals
+
 # Specify the role to get SSM credentials.
-ROLE_ARN = "arn:aws:iam::account/role"
+ROLE_ARN = shared.globals.CONFIGURATION["ssm_secret_iam_role"]
+REGION = shared.globals.CONFIGURATION["ssm_region_name"]
 
 def assume_role(session_name="CrossAccountSession"):
     """Assume the role and return temporary credentials"""
@@ -20,7 +23,7 @@ def get_secret_from_ssm_parameter_store(parameter_name, key=None, with_decryptio
     credentials = assume_role()
     ssm_client = boto3.client(
         "ssm",
-        region_name="us-east-1",
+        region_name=REGION,
         aws_access_key_id=credentials["AccessKeyId"],
         aws_secret_access_key=credentials["SecretAccessKey"],
         aws_session_token=credentials["SessionToken"]
