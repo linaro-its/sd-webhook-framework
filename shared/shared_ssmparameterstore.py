@@ -3,10 +3,11 @@
 import json
 import boto3
 
-ROLE_ARN = "arn:aws:iam::487149096843:role/ssm-parameter-store-access-role"
+# Specify the role to get SSM credentials.
+ROLE_ARN = "arn:aws:iam::account/role"
 
 def assume_role(session_name="CrossAccountSession"):
-    """Assume a role in Account 487149096843 and return temporary credentials"""
+    """Assume the role and return temporary credentials"""
     sts_client = boto3.client("sts")
     assumed_role = sts_client.assume_role(
         RoleArn=ROLE_ARN,
