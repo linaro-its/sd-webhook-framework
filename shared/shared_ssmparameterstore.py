@@ -1,29 +1,25 @@
-
 """ Script to retrieve parameter value from AWS Systems Manager Parameter Store"""
 import json
 import boto3
 
 import shared.globals
 
-# Specify the role to get SSM credentials.
-ROLE_ARN = shared.globals.CONFIGURATION["ssm_secret_iam_role"]
-REGION = shared.globals.CONFIGURATION["ssm_region_name"]
-
 def assume_role(session_name="CrossAccountSession"):
     """Assume the role and return temporary credentials"""
     sts_client = boto3.client("sts")
     assumed_role = sts_client.assume_role(
-        RoleArn=ROLE_ARN,
+        RoleArn=shared.globals.CONFIGURATION["ssm_secret_iam_role"],
         RoleSessionName=session_name
     )
     return assumed_role["Credentials"]
 
-def get_secret_from_ssm_parameter_store(parameter_name, key=None, with_decryption=True):
+
+def get_secret(parameter_name, key=None, with_decryption=True):
     """Retrieve a parameter value from AWS Systems Manager Parameter Store"""
     credentials = assume_role()
     ssm_client = boto3.client(
         "ssm",
-        region_name=REGION,
+        region_name=shared.globals.CONFIGURATION["ssm_region_name"],
         aws_access_key_id=credentials["AccessKeyId"],
         aws_secret_access_key=credentials["SecretAccessKey"],
         aws_session_token=credentials["SessionToken"]
