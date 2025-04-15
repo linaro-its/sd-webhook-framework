@@ -1,4 +1,4 @@
-urllib3==1.26.17
+urllib3==1.26.19
 Jinja2==3.1.6
 requests==2.31.0
 Flask==3.0.0
