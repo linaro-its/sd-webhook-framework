@@ -111,6 +111,12 @@
     // or specify the following Vault parameter:
     // "vault_ldap_name": "secret/blob/ldap_name",
 
+    // AWS SSM PARAMETER STORE
+    //
+    // Specify the IAM role to access the secret
+    // "ssm_secret_iam_role": "arn:aws:iam::account/role"
+    // "ssm_region_name": "region"
+
     // EMAIL
     //
     // Two mechanisms are supported in the framework for sending email:

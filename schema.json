@@ -39,6 +39,10 @@
             "description": "Path to retrieving the bot's password from Vault",
             "type": "string"
         },
+        "ssm_bot_name": {
+            "description": "Path to retrieving the bot's password from AWS SSM",
+            "type": "string"
+        },
         "ldap_enabled": {
             "description": "Is LDAP integration used?",
             "type": "boolean"
@@ -73,6 +77,10 @@
         },
         "vault_ldap_name": {
             "description": "Path to retrieving the LDAP user password from Vault",
+            "type": "string"
+        },
+        "ssm_ldap_name": {
+            "description": "Path to retrieving the LDAP user password from AWS SSM",
             "type": "string"
         },
         "mail_host": {
