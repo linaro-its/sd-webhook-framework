@@ -7,6 +7,7 @@ import sys
 
 from json_minify import json_minify
 
+import shared.shared_ssmparameterstore as shared_ssm
 import shared.shared_vault as shared_vault
 import shared.shared_sd as shared_sd
 
@@ -167,29 +168,65 @@ def initialise_config():
     validate_auth_config()
 
 
+# def get_google_credentials():
+#     """ Retrieve the Google JSON blob """
+#     if "google_json_file" not in CONFIGURATION:
+#         return json.loads(shared_vault.get_secret(CONFIGURATION["vault_google_name"]))
+#     return json.load(open(CONFIGURATION["google_json_file"], encoding="utf-8"))
+
+
 def get_google_credentials():
     """ Retrieve the Google JSON blob """
     if "google_json_file" not in CONFIGURATION:
-        return json.loads(shared_vault.get_secret(CONFIGURATION["vault_google_name"]))
+        return json.loads(shared_ssm.get_secret(CONFIGURATION["ssm_google_name"]))
     return json.load(open(CONFIGURATION["google_json_file"], encoding="utf-8"))
+
+
+# def get_ldap_credentials():
+#     """ Retrieve the credentials required by the LDAP code """
+#     if "ldap_password" not in CONFIGURATION:
+#         return CONFIGURATION["ldap_user"], shared_vault.get_secret(CONFIGURATION["vault_ldap_name"])
+#     return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
 
 
 def get_ldap_credentials():
     """ Retrieve the credentials required by the LDAP code """
     if "ldap_password" not in CONFIGURATION:
-        return CONFIGURATION["ldap_user"], shared_vault.get_secret(CONFIGURATION["vault_ldap_name"])
+        return CONFIGURATION["ldap_user"], shared_ssm.get_secret(CONFIGURATION["ssm_ldap_name"])
     return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
+
+
+# def get_sd_credentials():
+#     """ Retrieve the credentials required by SD_AUTH """
+#     if "bot_password" not in CONFIGURATION:
+#         # Try API key first
+#         pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"], "api-token")
+#         if pwd is None:
+#             pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
+#         return CONFIGURATION["bot_name"], pwd
+#     return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
 
 
 def get_sd_credentials():
     """ Retrieve the credentials required by SD_AUTH """
     if "bot_password" not in CONFIGURATION:
         # Try API key first
-        pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"], "api-token")
+        pwd = shared_ssm.get_secret(CONFIGURATION["ssm_bot_name"], "api-token")
         if pwd is None:
-            pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
+            pwd = shared_ssm.get_secret(CONFIGURATION["ssm_bot_name"])
         return CONFIGURATION["bot_name"], pwd
     return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
+
+
+# def get_email_credentials():
+#     """ Retrieve the credentials required when sending email """
+#     if "mail_user" not in CONFIGURATION:
+#         return None, None
+#     # We already known (from validate_auth_config) that we can only have
+#     # either password or vault settings so act accordingly.
+#     if "vault_mail_name" in CONFIGURATION:
+#         return CONFIGURATION["mail_user"], shared_vault.get_secret(CONFIGURATION["vault_mail_name"])
+#     return CONFIGURATION["mail_user"], CONFIGURATION["mail_password"]
 
 
 def get_email_credentials():
@@ -197,10 +234,11 @@ def get_email_credentials():
     if "mail_user" not in CONFIGURATION:
         return None, None
     # We already known (from validate_auth_config) that we can only have
-    # either password or vault settings so act accordingly.
-    if "vault_mail_name" in CONFIGURATION:
-        return CONFIGURATION["mail_user"], shared_vault.get_secret(CONFIGURATION["vault_mail_name"])
+    # either password or SSM Parameter Store settings so act accordingly.
+    if "ssm_mail_name" in CONFIGURATION:
+        return CONFIGURATION["mail_user"], shared_ssm.get_secret(CONFIGURATION["ssm_mail_name"])
     return CONFIGURATION["mail_user"], CONFIGURATION["mail_password"]
+
 
 
 def initialise_sd_auth():
