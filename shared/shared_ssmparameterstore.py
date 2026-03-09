@@ -6,9 +6,11 @@ import shared.globals
 
 def assume_role(session_name="CrossAccountSession"):
     """Assume the role and return temporary credentials"""
+    role_arn = shared.globals.CONFIGURATION["ssm_secret_iam_role"]
+    print(f"[SSM] Assuming role: {role_arn}")
     sts_client = boto3.client("sts")
     assumed_role = sts_client.assume_role(
-        RoleArn=shared.globals.CONFIGURATION["ssm_secret_iam_role"],
+        RoleArn=role_arn,
         RoleSessionName=session_name
     )
     return assumed_role["Credentials"]
@@ -16,6 +18,7 @@ def assume_role(session_name="CrossAccountSession"):
 
 def get_secret(parameter_name, key=None, with_decryption=True):
     """Retrieve a parameter value from AWS Systems Manager Parameter Store"""
+    print(f"[SSM] Fetching parameter: {parameter_name}")
     credentials = assume_role()
     ssm_client = boto3.client(
         "ssm",
@@ -30,6 +33,7 @@ def get_secret(parameter_name, key=None, with_decryption=True):
         Name=parameter_name,
         WithDecryption=with_decryption
     )
+    print(f"[SSM] Successfully retrieved parameter: {parameter_name}")
     parameter_value = response["Parameter"]["Value"]
     data = json.loads(parameter_value)
 
