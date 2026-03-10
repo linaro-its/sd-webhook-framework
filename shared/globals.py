@@ -8,7 +8,6 @@ import sys
 from json_minify import json_minify
 
 import shared.shared_ssmparameterstore as shared_ssm
-import shared.shared_vault as shared_vault
 import shared.shared_sd as shared_sd
 
 CONFIGURATION = None
@@ -103,53 +102,6 @@ def validate_cf_config():
         CONFIGURATION["cf_cachefile"] = f"{basedir}/cf_cachefile"
 
 
-def validate_vault_tag(tag, required):
-    """ Check if the tag is present when it needs to be. """
-    if tag in CONFIGURATION:
-        if not required:
-            raise OverlappingCredentials(
-                f"Can't have '{tag}' when a password has been specified "
-                "in the configuration file"
-            )
-    else:
-        if required:
-            raise MissingCredentials(
-                f"Missing '{tag}' in configuration file")
-
-
-def validate_vault_config(vault_user_tag, required):
-    """ Check the various vault config combinations. """
-    validate_vault_tag(vault_user_tag, required)
-    validate_vault_tag("vault_iam_role", required)
-    validate_vault_tag("vault_server_url", required)
-
-
-def validate_user_password_config(user_tag, password_tag, vault_user_tag):
-    """ Check the user/password configuration is valid. """
-    if user_tag not in CONFIGURATION:
-        raise MissingCredentials(
-            f"Missing '{user_tag}' in configuration file")
-    if password_tag not in CONFIGURATION:
-        # Make sure that all of the Vault values are there
-        validate_vault_config(vault_user_tag, True)
-    else:
-        # We're using a password to authenticate with. Just as a sanity check,
-        # make sure that the Vault user tag is not there. We don't care about
-        # the IAM role or server URL because they could be needed by one of the
-        # other auth sections in the config.
-        validate_vault_tag(vault_user_tag, False)
-
-
-def validate_auth_config():
-    """ Raise exceptions if the configuration has problems. """
-    validate_user_password_config("bot_name", "bot_password", "vault_bot_name")
-    if "ldap_enabled" in CONFIGURATION and CONFIGURATION["ldap_enabled"]:
-        validate_user_password_config("ldap_user", "ldap_password", "vault_ldap_name")
-    if "mail_host" in CONFIGURATION and "mail_user" in CONFIGURATION:
-        # Only check mail auth if we have a server and a user defined.
-        validate_user_password_config("mail_user", "mail_password", "vault_mail_name")
-
-
 def initialise_config():
     """ Read the JSON configuration file into a global JSON blob. """
     global CONFIGURATION
@@ -165,14 +117,6 @@ def initialise_config():
     except json.decoder.JSONDecodeError as exc:
         raise MalformedJSON("Unable to decode configuration file successfully") from exc
     validate_cf_config()
-    validate_auth_config()
-
-
-# def get_google_credentials():
-#     """ Retrieve the Google JSON blob """
-#     if "google_json_file" not in CONFIGURATION:
-#         return json.loads(shared_vault.get_secret(CONFIGURATION["vault_google_name"]))
-#     return json.load(open(CONFIGURATION["google_json_file"], encoding="utf-8"))
 
 
 def get_google_credentials():
@@ -182,29 +126,11 @@ def get_google_credentials():
     return json.load(open(CONFIGURATION["google_json_file"], encoding="utf-8"))
 
 
-# def get_ldap_credentials():
-#     """ Retrieve the credentials required by the LDAP code """
-#     if "ldap_password" not in CONFIGURATION:
-#         return CONFIGURATION["ldap_user"], shared_vault.get_secret(CONFIGURATION["vault_ldap_name"])
-#     return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
-
-
 def get_ldap_credentials():
     """ Retrieve the credentials required by the LDAP code """
     if "ldap_password" not in CONFIGURATION:
         return CONFIGURATION["ldap_user"], shared_ssm.get_secret(CONFIGURATION["ssm_ldap_name"])
     return CONFIGURATION["ldap_user"], CONFIGURATION["ldap_password"]
-
-
-# def get_sd_credentials():
-#     """ Retrieve the credentials required by SD_AUTH """
-#     if "bot_password" not in CONFIGURATION:
-#         # Try API key first
-#         pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"], "api-token")
-#         if pwd is None:
-#             pwd = shared_vault.get_secret(CONFIGURATION["vault_bot_name"])
-#         return CONFIGURATION["bot_name"], pwd
-#     return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
 
 
 def get_sd_credentials():
@@ -216,17 +142,6 @@ def get_sd_credentials():
             pwd = shared_ssm.get_secret(CONFIGURATION["ssm_bot_name"])
         return CONFIGURATION["bot_name"], pwd
     return CONFIGURATION["bot_name"], CONFIGURATION["bot_password"]
-
-
-# def get_email_credentials():
-#     """ Retrieve the credentials required when sending email """
-#     if "mail_user" not in CONFIGURATION:
-#         return None, None
-#     # We already known (from validate_auth_config) that we can only have
-#     # either password or vault settings so act accordingly.
-#     if "vault_mail_name" in CONFIGURATION:
-#         return CONFIGURATION["mail_user"], shared_vault.get_secret(CONFIGURATION["vault_mail_name"])
-#     return CONFIGURATION["mail_user"], CONFIGURATION["mail_password"]
 
 
 def get_email_credentials():
