@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.12
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends apache2 apache2-dev locales && \
@@ -10,7 +10,7 @@ RUN echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen && locale-gen
 ENV LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8
 
-RUN pip install -U pip setuptools wheel
+RUN pip install --upgrade "pip>=26.2.2" setuptools wheel
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
 RUN pip install git+https://github.com/linaro-its/vault_auth.git
