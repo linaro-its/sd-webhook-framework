@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.15
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends apache2 apache2-dev locales && \
